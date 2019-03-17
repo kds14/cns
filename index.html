@@ -9,9 +9,9 @@
 	<div id="worker-area">
 		<div class="centered-text">Employees</div>
 		<div id="unskilled-tab">
-			<div id="unskilled-text">
+			<span title="Unlocks managers" id="unskilled-text">
 			Unskilled Workers: 0 ($9/hr)
-			</div>
+			</span>
 			<button id="unskilled-hire" class="cbtn" onclick="unskilled_hire()">
 			Hire
 			</button>
@@ -41,7 +41,18 @@
 		</div>
 	</div>
 	<div id="green">GREEN</div>
-	<div id="resource-bar">BAR</div>
+	<div id="resource-bar">
+		<div id="money-stat"></div>
+		<div id="worker-stat"></div>
+		<div id="worker-cap"></div>
+		<div id="worker-eff"></div>
+		<div></div>
+		<div></div>
+		<div id="max-pack-cap"></div>
+		<div id="pack-queued"></div>
+		<div id="pack-stored"></div>
+		<div id="pack-shipped"></div>
+	</div>
 </div>
 </body>
 <script src="./main.js"></script>

@@ -6,9 +6,23 @@ function draw_resource_bar(state) {
     var wages = (state.timers.wages.amnt);
     var pm = money_rate;
     var phr = 0 - wages;
-    document.getElementById("resource-bar").innerHTML =
+    document.getElementById("money-stat").innerHTML =
         "Money: $" + state.res.money + " ($" + pm + "/min)"
-            + "($" + phr + "/hr)<br>Workers: " + state.res.workers;
+            + "($" + phr + "/hr)";
+    document.getElementById("worker-stat").innerHTML =
+        "Workers: " + state.res.workers;
+    document.getElementById("worker-cap").innerHTML =
+        "Maximum Worker Capacity: " + state.res.worker_cap;
+    document.getElementById("worker-eff").innerHTML =
+        "Worker Efficiency: " + state.res.worker_eff + "%";
+    document.getElementById("max-pack-cap").innerHTML =
+        "Maximum Package Capacity: " + state.res.pack_cap;
+    document.getElementById("pack-queued").innerHTML =
+        "Queued Packages: " + state.res.pack_queued;
+    document.getElementById("pack-stored").innerHTML =
+        "Stored Packages: " + state.res.pack_stored;
+    document.getElementById("pack-shipped").innerHTML =
+        "Shipped Packages: " + state.res.pack_shipped;
 }
 function draw_worker_area(state) {
     document.getElementById("unskilled-text").innerHTML =
@@ -23,7 +37,8 @@ function draw(state) {
     draw_worker_area(state);
 }
 function unhide(state) {
-    if (!state.upgrades.basic1 && state.res.money >= 10) {
+    if (!state.upgrades.basic1 && state.res.money >=
+        state.prices.basic1) {
         document.getElementById("basic-res-1").style.display = "inline";
     }
 }
@@ -70,45 +85,78 @@ var gstate = {
         money: 0,
         unsk_w: 0,
         manag: 0,
-        workers: 0
+        workers: 0,
+        worker_cap: 10,
+        worker_eff: 10.0,
+        pack_cap: 100,
+        pack_queued: 0,
+        pack_stored: 0,
+        pack_shipped: 0
     },
     prices: {
         unsk_w: 9,
-        manag: 15
+        manag: 15,
+        basic1: 10
     },
     upgrades: {
         basic1: false
     }
 };
 update(gstate);
+function change_worker(add, state) {
+    if (add) {
+        if (state.res.workers < state.res.worker_cap) {
+            gstate.res.workers += 1;
+        }
+        else {
+            return false;
+        }
+    }
+    else {
+        if (state.res.workers > 0) {
+            gstate.res.workers -= 1;
+        }
+        else {
+            return false;
+        }
+    }
+    return true;
+}
 /* onclick functions */
 function unskilled_hire() {
-    gstate.timers.wages.amnt += gstate.prices.unsk_w;
-    gstate.res.unsk_w += 1;
-    gstate.res.workers += 1;
-    draw(gstate);
+    if (change_worker(true, gstate)) {
+        gstate.timers.wages.amnt += gstate.prices.unsk_w;
+        gstate.res.unsk_w += 1;
+        draw(gstate);
+    }
 }
 function unskilled_fire() {
-    gstate.timers.wages.amnt -= gstate.prices.unsk_w;
-    gstate.res.unsk_w -= 1;
-    gstate.res.workers -= 1;
-    draw(gstate);
+    if (change_worker(false, gstate)) {
+        gstate.timers.wages.amnt -= gstate.prices.unsk_w;
+        gstate.res.unsk_w -= 1;
+        draw(gstate);
+    }
 }
 function basic_research_1() {
-    document.getElementById("basic-res-1").style.display = "none";
-    gstate.upgrades.basic1 = true;
-    document.getElementById("manager-tab").style.display = "inline";
-    draw(gstate);
+    if (gstate.res.money >= gstate.prices.basic1) {
+        gstate.res.money -= gstate.prices.basic1;
+        document.getElementById("basic-res-1").style.display = "none";
+        gstate.upgrades.basic1 = true;
+        document.getElementById("manager-tab").style.display = "inline";
+        draw(gstate);
+    }
 }
 function manager_hire() {
-    gstate.timers.wages.amnt += gstate.prices.manag;
-    gstate.res.manag += 1;
-    gstate.res.workers += 1;
-    draw(gstate);
+    if (change_worker(true, gstate)) {
+        gstate.timers.wages.amnt += gstate.prices.manag;
+        gstate.res.manag += 1;
+        draw(gstate);
+    }
 }
 function manager_fire() {
-    gstate.timers.wages.amnt -= gstate.prices.unsk_w;
-    gstate.res.manag -= 1;
-    gstate.res.workers -= 1;
-    draw(gstate);
+    if (change_worker(false, gstate)) {
+        gstate.timers.wages.amnt -= gstate.prices.unsk_w;
+        gstate.res.manag -= 1;
+        draw(gstate);
+    }
 }
