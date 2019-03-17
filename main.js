@@ -1,19 +1,41 @@
 var tick_time = 1000;
-function hello(person) {
-    return "HELLO " + person;
+function draw_resource_bar(state) {
+    var money_rate = state.timers.base.amnt /
+        state.timers.base.limit;
+    state.ui.res_bar.innerHTML =
+        "Money: $" + state.res.money + " ($" + money_rate + "/s)";
 }
-var user = "KYLE";
-document.title = hello(user);
 function tick(state) {
-    state.val += 1;
-    console.log(state);
+    state.ticks += 1;
+    if (state.ticks - state.timers.base.prev >
+        state.timers.base.limit) {
+        state.res.money += state.timers.base.amnt;
+    }
+    draw_resource_bar(state);
 }
-var gstate = { prev_time: 0, time: (new Date()).getTime(), val: 0 };
+var gstate = {
+    time_prev: 0,
+    time: (new Date()).getTime(),
+    ticks: 0,
+    ui: {
+        res_bar: document.getElementById("resource-bar")
+    },
+    timers: {
+        base: {
+            limit: 1,
+            prev: 0,
+            amnt: 1
+        }
+    },
+    res: {
+        money: 0
+    }
+};
 function update() {
     gstate.time = (new Date()).getTime();
-    if (gstate.time - gstate.prev_time > tick_time) {
+    if (gstate.time - gstate.time_prev > tick_time) {
         tick(gstate);
-        gstate.prev_time = gstate.time;
+        gstate.time_prev = gstate.time;
     }
     requestAnimationFrame(update);
 }
