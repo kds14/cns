@@ -13,30 +13,35 @@ function tick(state) {
     }
     draw_resource_bar(state);
 }
-var gstate = {
-    time_prev: 0,
-    time: (new Date()).getTime(),
-    ticks: 0,
-    ui: {
-        res_bar: document.getElementById("resource-bar")
-    },
-    timers: {
-        base: {
-            limit: 1,
-            prev: 0,
-            amnt: 1
+// game entry point
+function init() {
+    var gstate = {
+        time_prev: 0,
+        time: (new Date()).getTime(),
+        ticks: 0,
+        ui: {
+            res_bar: document.getElementById("resource-bar")
+        },
+        timers: {
+            base: {
+                limit: 1,
+                prev: 0,
+                amnt: 1
+            }
+        },
+        res: {
+            money: 0
         }
-    },
-    res: {
-        money: 0
-    }
-};
-function update() {
-    gstate.time = (new Date()).getTime();
-    if (gstate.time - gstate.time_prev > tick_time) {
-        tick(gstate);
-        gstate.time_prev = gstate.time;
-    }
-    requestAnimationFrame(update);
+    };
+    update(gstate);
 }
-update();
+// frame update
+function update(state) {
+    state.time = (new Date()).getTime();
+    if (state.time - state.time_prev > tick_time) {
+        tick(state);
+        state.time_prev = state.time;
+    }
+    requestAnimationFrame((function () { return update(state); }));
+}
+init();

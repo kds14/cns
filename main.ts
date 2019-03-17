@@ -43,32 +43,37 @@ function tick(state: GameState) {
 	draw_resource_bar(state);
 }
 
-let gstate = {
-	time_prev: 0,
-	time:(new Date()).getTime(),
-	ticks: 0,
-	ui: {
-		res_bar: document.getElementById("resource-bar")
-	},
-	timers: {
-		base: {
-			limit: 1,
-			prev: 0,
-			amnt: 1
+// game entry point
+function init() {
+	let gstate = {
+		time_prev: 0,
+		time:(new Date()).getTime(),
+		ticks: 0,
+		ui: {
+			res_bar: document.getElementById("resource-bar")
+		},
+		timers: {
+			base: {
+				limit: 1,
+				prev: 0,
+				amnt: 1
+			}
+		},
+		res: {
+			money: 0
 		}
-	},
-	res: {
-		money: 0
 	}
+	update(gstate);
 }
 
-function update() {
-	gstate.time = (new Date()).getTime();
-	if (gstate.time - gstate.time_prev > tick_time) {
-		tick(gstate);
-		gstate.time_prev = gstate.time;
+// frame update
+function update(state: GameState) {
+	state.time = (new Date()).getTime();
+	if (state.time - state.time_prev > tick_time) {
+		tick(state);
+		state.time_prev = state.time;
 	}
-	requestAnimationFrame(update);
+	requestAnimationFrame((()=>update(state)));
 }
 
-update();
+init();
