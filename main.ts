@@ -6,7 +6,7 @@ interface Resources {
 	worker_cap: number;
 	worker_eff: number;
 	pack_cap: number;
-	pack_queued: number;
+	pack_rec: number;
 	pack_stored: number;
 	pack_shipped: number;
 }
@@ -63,8 +63,8 @@ function draw_resource_bar(state: GameState) {
 		"Worker Efficiency: " + state.res.worker_eff + "%";
 	document.getElementById("max-pack-cap").innerHTML =
 		"Maximum Package Capacity: " + state.res.pack_cap;
-	document.getElementById("pack-queued").innerHTML =
-		"Queued Packages: " + state.res.pack_queued;
+	document.getElementById("pack-rec").innerHTML =
+		"Received Packages: " + state.res.pack_rec;
 	document.getElementById("pack-stored").innerHTML =
 		"Stored Packages: " + state.res.pack_stored;
 	document.getElementById("pack-shipped").innerHTML =
@@ -92,6 +92,12 @@ function unhide(state: GameState) {
 	}
 }
 
+function state_update(state: GameState) {
+	calculate_effeciency(state);
+	draw(state);
+	unhide(state);
+}
+
 function tick(state: GameState) {
 	state.ticks += 1;
 	if (state.ticks - state.timers.base.prev >= 
@@ -104,8 +110,7 @@ function tick(state: GameState) {
 		state.res.money -= state.timers.wages.amnt;
 		state.timers.wages.prev = state.ticks;
 	}
-	draw(state);
-	unhide(state);
+	state_update(state);
 }
 
 function update(state: GameState) {
@@ -141,7 +146,7 @@ let gstate = {
 		worker_cap: 10,
 		worker_eff: 10.0,
 		pack_cap: 100,
-		pack_queued: 0,
+		pack_rec: 0,
 		pack_stored: 0,
 		pack_shipped: 0
 	},
@@ -173,13 +178,49 @@ function change_worker(add: Boolean, state: GameState): Boolean {
 	return true;
 }
 
+function calculate_effeciency(state: GameState): void {
+	const base_eff = 10;
+	let bonuses = 0;
+
+	let mw_diff = state.res.workers - state.res.manag;
+	if (mw_diff <= 0) {
+		state.res.worker_eff = 0;
+		return;
+	}
+	let mwr = 0;
+	if (state.res.manag > 5) {
+		mwr = (mw_diff * 1.0 / state.res.manag);
+		if (mwr < 2) {
+			mwr = -20;
+		} else if (mwr < 4 || mwr > 30) {
+			mwr = -10;
+		} else if (mwr < 8 || mwr > 20) {
+			mwr = 5;
+		} else if (mwr < 10 || mwr > 15) {
+			mwr = 10;
+		} else if (mwr == 10) {
+			mwr = 25;
+		} else {
+			mwr = 15;
+		}
+		if (state.res.manag > 10) {
+			mwr *= 1.25;
+		} else if (state.res.manag > 100) {
+			mwr *= 1.5;
+		}
+	} else if (state.res.manag > 0) {
+		mwr = 10;
+	}
+	state.res.worker_eff = base_eff + mwr + bonuses;
+}
+
 /* onclick functions */
 
 function unskilled_hire() {
 	if (change_worker(true, gstate)) {
 		gstate.timers.wages.amnt += gstate.prices.unsk_w;
 		gstate.res.unsk_w += 1;
-		draw(gstate);
+		state_update(gstate);
 	}
 }
 
@@ -187,7 +228,7 @@ function unskilled_fire() {
 	if (change_worker(false, gstate)) {
 		gstate.timers.wages.amnt -= gstate.prices.unsk_w;
 		gstate.res.unsk_w -= 1;
-		draw(gstate);
+		state_update(gstate);
 	}
 }
 
@@ -197,7 +238,7 @@ function basic_research_1() {
 		document.getElementById("basic-res-1").style.display = "none";
 		gstate.upgrades.basic1 = true;
 		document.getElementById("manager-tab").style.display = "inline";
-		draw(gstate);
+		state_update(gstate);
 	}
 }
 
@@ -205,7 +246,7 @@ function manager_hire() {
 	if (change_worker(true, gstate)) {
 		gstate.timers.wages.amnt += gstate.prices.manag;
 		gstate.res.manag += 1;
-		draw(gstate);
+		state_update(gstate);
 	}
 }
 
@@ -213,6 +254,6 @@ function manager_fire() {
 	if (change_worker(false, gstate)) {
 		gstate.timers.wages.amnt -= gstate.prices.unsk_w;
 		gstate.res.manag -= 1;
-		draw(gstate);
+		state_update(gstate);
 	}
 }
