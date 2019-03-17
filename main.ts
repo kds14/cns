@@ -26,6 +26,7 @@ interface Timer {
 interface Timers {
 	base: Timer;
 	wages: Timer;
+	pack: Timer;
 }
 
 interface Upgrades {
@@ -53,10 +54,10 @@ function draw_resource_bar(state: GameState) {
 	const pm = money_rate;
 	const phr = 0 - wages;
 	document.getElementById("money-stat").innerHTML =
-		"Money: $" + state.res.money + " ($" + pm + "/min)"
+		"Money: $" + Math.floor(state.res.money) + " ($" + pm + "/min)"
 		+ "($" + phr + "/hr)";
 	document.getElementById("worker-stat").innerHTML =
-		"Workers: " + state.res.workers;
+		"Employees: " + state.res.workers;
 	document.getElementById("worker-cap").innerHTML =
 		"Maximum Worker Capacity: " + state.res.worker_cap;
 	document.getElementById("worker-eff").innerHTML =
@@ -64,11 +65,11 @@ function draw_resource_bar(state: GameState) {
 	document.getElementById("max-pack-cap").innerHTML =
 		"Maximum Package Capacity: " + state.res.pack_cap;
 	document.getElementById("pack-rec").innerHTML =
-		"Received Packages: " + state.res.pack_rec;
+		"Received Packages: " + Math.floor(state.res.pack_rec);
 	document.getElementById("pack-stored").innerHTML =
-		"Stored Packages: " + state.res.pack_stored;
+		"Stored Packages: " + Math.floor(state.res.pack_stored);
 	document.getElementById("pack-shipped").innerHTML =
-		"Shipped Packages: " + state.res.pack_shipped;
+		"Shipped Packages: " + Math.floor(state.res.pack_shipped);
 }
 
 function draw_worker_area(state: GameState) {
@@ -110,6 +111,7 @@ function tick(state: GameState) {
 		state.res.money -= state.timers.wages.amnt;
 		state.timers.wages.prev = state.ticks;
 	}
+	handle_packages(state);
 	state_update(state);
 }
 
@@ -136,6 +138,11 @@ let gstate = {
 			limit: 60,
 			prev: 0,
 			amnt: 0
+		},
+		pack: {
+			limit: 10,
+			prev: 0,
+			amnt: 1
 		}
 	},
 	res: {
@@ -148,7 +155,7 @@ let gstate = {
 		pack_cap: 100,
 		pack_rec: 0,
 		pack_stored: 0,
-		pack_shipped: 0
+		pack_shipped: 0,
 	},
 	prices: {
 		unsk_w: 9,
@@ -176,6 +183,43 @@ function change_worker(add: Boolean, state: GameState): Boolean {
 		}
 	}
 	return true;
+}
+
+function handle_packages(state: GameState) {
+	if (state.ticks - state.timers.pack.prev >= 
+			state.timers.pack.limit) {
+		const full = state.res.unsk_w * state.res.worker_eff * 1.0;
+		const store_half = Math.random() * full / 20;
+		const ship_half = Math.random() * full / 100;
+		console.log(store_half);
+		console.log(ship_half);
+		if (state.res.pack_stored >= 1) {
+			let mov_str2shp = ship_half;
+			if (mov_str2shp > state.res.pack_stored) {
+				mov_str2shp = state.res.pack_stored;
+			}
+			if (mov_str2shp >= 1) {
+				state.res.money += (80 * Math.random() + 20) * state.res.pack_rec;
+			}
+			state.res.pack_stored -= mov_str2shp;
+			state.res.pack_shipped += mov_str2shp;
+		}
+
+		if (state.res.pack_rec >= 1) {
+			let mov_rec2str = store_half;
+			if (mov_rec2str > state.res.pack_rec) {
+				mov_rec2str = state.res.pack_rec;
+			}
+			state.res.pack_rec -= mov_rec2str;
+			state.res.pack_stored +=  mov_rec2str;
+		}
+
+		if (state.res.pack_rec + state.res.pack_stored < state.res.pack_cap) {
+			let val = (state.timers.pack.amnt * state.res.pack_cap + 1) / 100;
+			state.res.pack_rec += (2.0 * Math.random() + 0.5) * val;
+			state.timers.pack.prev = state.ticks;
+		}
+	}
 }
 
 function calculate_effeciency(state: GameState): void {

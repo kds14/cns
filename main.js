@@ -7,10 +7,10 @@ function draw_resource_bar(state) {
     var pm = money_rate;
     var phr = 0 - wages;
     document.getElementById("money-stat").innerHTML =
-        "Money: $" + state.res.money + " ($" + pm + "/min)"
+        "Money: $" + Math.floor(state.res.money) + " ($" + pm + "/min)"
             + "($" + phr + "/hr)";
     document.getElementById("worker-stat").innerHTML =
-        "Workers: " + state.res.workers;
+        "Employees: " + state.res.workers;
     document.getElementById("worker-cap").innerHTML =
         "Maximum Worker Capacity: " + state.res.worker_cap;
     document.getElementById("worker-eff").innerHTML =
@@ -18,11 +18,11 @@ function draw_resource_bar(state) {
     document.getElementById("max-pack-cap").innerHTML =
         "Maximum Package Capacity: " + state.res.pack_cap;
     document.getElementById("pack-rec").innerHTML =
-        "Received Packages: " + state.res.pack_rec;
+        "Received Packages: " + Math.floor(state.res.pack_rec);
     document.getElementById("pack-stored").innerHTML =
-        "Stored Packages: " + state.res.pack_stored;
+        "Stored Packages: " + Math.floor(state.res.pack_stored);
     document.getElementById("pack-shipped").innerHTML =
-        "Shipped Packages: " + state.res.pack_shipped;
+        "Shipped Packages: " + Math.floor(state.res.pack_shipped);
 }
 function draw_worker_area(state) {
     document.getElementById("unskilled-text").innerHTML =
@@ -59,6 +59,7 @@ function tick(state) {
         state.res.money -= state.timers.wages.amnt;
         state.timers.wages.prev = state.ticks;
     }
+    handle_packages(state);
     state_update(state);
 }
 function update(state) {
@@ -83,6 +84,11 @@ var gstate = {
             limit: 60,
             prev: 0,
             amnt: 0
+        },
+        pack: {
+            limit: 10,
+            prev: 0,
+            amnt: 1
         }
     },
     res: {
@@ -126,6 +132,40 @@ function change_worker(add, state) {
     }
     return true;
 }
+function handle_packages(state) {
+    if (state.ticks - state.timers.pack.prev >=
+        state.timers.pack.limit) {
+        var full = state.res.unsk_w * state.res.worker_eff * 1.0;
+        var store_half = Math.random() * full / 20;
+        var ship_half = Math.random() * full / 100;
+        console.log(store_half);
+        console.log(ship_half);
+        if (state.res.pack_stored >= 1) {
+            var mov_str2shp = ship_half;
+            if (mov_str2shp > state.res.pack_stored) {
+                mov_str2shp = state.res.pack_stored;
+            }
+            if (mov_str2shp >= 1) {
+                state.res.money += (80 * Math.random() + 20) * state.res.pack_rec;
+            }
+            state.res.pack_stored -= mov_str2shp;
+            state.res.pack_shipped += mov_str2shp;
+        }
+        if (state.res.pack_rec >= 1) {
+            var mov_rec2str = store_half;
+            if (mov_rec2str > state.res.pack_rec) {
+                mov_rec2str = state.res.pack_rec;
+            }
+            state.res.pack_rec -= mov_rec2str;
+            state.res.pack_stored += mov_rec2str;
+        }
+        if (state.res.pack_rec + state.res.pack_stored < state.res.pack_cap) {
+            var val = (state.timers.pack.amnt * state.res.pack_cap + 1) / 100;
+            state.res.pack_rec += (10.0 * Math.random() + 0.5) * val;
+            state.timers.pack.prev = state.ticks;
+        }
+    }
+}
 function calculate_effeciency(state) {
     var base_eff = 10;
     var bonuses = 0;
@@ -135,7 +175,7 @@ function calculate_effeciency(state) {
         return;
     }
     var mwr = 0;
-    if (state.res.manag > 3) {
+    if (state.res.manag > 5) {
         mwr = (mw_diff * 1.0 / state.res.manag);
         if (mwr < 2) {
             mwr = -20;
@@ -156,6 +196,9 @@ function calculate_effeciency(state) {
             mwr = 15;
         }
         if (state.res.manag > 10) {
+            mwr *= 1.25;
+        }
+        else if (state.res.manag > 100) {
             mwr *= 1.5;
         }
     }
