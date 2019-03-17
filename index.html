@@ -6,9 +6,24 @@
 <header><title>TITLE</title></header>
 <body>
 <div class="grid">
-	<div id="red">RED</div>
-	<div id="green">GREEN</div>
+	<div id="worker-area">
+		<div class="centered-text">Employees</div>
+		<div id="unskilled-tab" class="worker-tab">
+			<div id="unskilled-text">
+			Unskilled Workers: 0 ($8/hr)
+			</div>
+			<button id="unskilled-hire" class="cbtn" onclick="unskilled_hire()">
+			Hire
+			</button>
+			<button id="unskilled-fire" class="cbtn" onclick="unskilled_fire()">
+			Fire
+			</button>
+		</div>
+		<div style="display:hidden">TEST</div>
+		<div>TEST2</div>
+	</div>
 	<div id="yellow">YELLOW</div>
+	<div id="green">GREEN</div>
 	<div id="resource-bar">BAR</div>
 </div>
 </body>
