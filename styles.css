@@ -1,0 +1,28 @@
+.grid {
+	display: grid;
+	grid-auto-rows: minmax(100px, auto);
+	grid-template-columns: repeat(6, minmax(200px,1fr));
+	grid-gap: 10px;
+}
+
+#red { 
+	grid-column: 2 / 3;
+	grid-row: 1;
+	border: 1px solid red;
+	background-color: red;
+	opacity: 0.5;
+}
+
+#green {
+	grid-column: 1;
+	border: 1px solid green;
+	background-color: green;
+	opacity: 0.5;
+}
+
+#yellow {
+	grid-column: 3;
+	border: 1px solid yellow;
+	background-color: yellow;
+	opacity: 0.5;
+}
