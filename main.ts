@@ -32,6 +32,7 @@ interface Prices {
 	op_res: number;
 	sci_manag: number;
 	auto1: number;
+	belt: number;
 }
 
 interface Timer {
@@ -51,6 +52,11 @@ interface Upgrades {
 	marketing2: Boolean,
 	sci_manag: Boolean,
 	op_res: Boolean,
+	auto1: Boolean,
+}
+
+interface Equip {
+	belt: number;
 }
 
 interface GameState {
@@ -60,7 +66,8 @@ interface GameState {
 	timers: Timers;
 	res: Resources;
 	prices: Prices;
-	upgrades: Upgrades
+	upgrades: Upgrades;
+	equip: Equip;
 }
 
 const tick_time = 1000;
@@ -113,7 +120,8 @@ let gstate = {
 		marketing1: 200,
 		marketing2: 10000,
 		op_res: 3000,
-		auto1: 1000,
+		auto1: 100,
+		belt: 10,
 	},
 	upgrades: {
 		basic1: false,
@@ -121,6 +129,10 @@ let gstate = {
 		marketing2: false,
 		op_res: false,
 		sci_manag: false,
+		auto1: false,
+	},
+	equip: {
+		belt: 0
 	}
 }
 
@@ -157,6 +169,10 @@ function draw_resource_bar(state: GameState) {
 		"Research Points (RP): " + state.res.rp;
 		document.getElementById("research-points").title = "Used for research";
 	}
+	if (state.upgrades.auto1) {
+	document.getElementById("belt-text").innerHTML =
+		"Conveyer Belts: " + state.equip.belt + " [$" + state.prices.belt + "]";
+	}
 }
 
 function draw_worker_area(state: GameState) {
@@ -180,17 +196,17 @@ function draw_worker_area(state: GameState) {
 
 function init_upgrade_draw(state: GameState) {
 	document.getElementById("basic-res-1-text").innerHTML =
-	"Basic Business Textbook [$" + state.prices.basic1 + "]";
+		"Basic Business Textbook [$" + state.prices.basic1 + "]";
 	document.getElementById("mark-1-text").innerHTML =
-	"Marketing I [$" + state.prices.marketing1 + "]";
+		"Marketing I [$" + state.prices.marketing1 + "]";
 	document.getElementById("mark-2-text").innerHTML =
-	"Marketing II [$" + state.prices.marketing2 + "]";
+		"Marketing II [$" + state.prices.marketing2 + "]";
 	document.getElementById("sci-manag-text").innerHTML =
-	"Scientific Management [$" + state.prices.sci_manag + "]";
+		"Scientific Management [$" + state.prices.sci_manag + "]";
 	document.getElementById("op-res-text").innerHTML =
-	"Operations Research [$" + state.prices.op_res + "]";
+		"Operations Research [$" + state.prices.op_res + "]";
 	document.getElementById("automation1-text").innerHTML =
-	"Automation Research [" + state.prices.auto1 + "RP]";
+		"Automation Research I [" + state.prices.auto1 + "RP]";
 }
 
 function draw(state: GameState) {
@@ -242,7 +258,7 @@ function receive_packages(state: GameState) {
 }
 
 function store_packages(state: GameState) {
-	const eff = state.res.labor * state.res.efficiency * 1.0;
+	const eff = state.res.labor * state.res.efficiency * 1.0 * (1 + 2 * state.equip.belt);
 	if (eff <= state.res.pack_rec) {
 		state.res.pack_rec -= eff;
 		state.res.pack_stored += eff;
@@ -252,7 +268,7 @@ function store_packages(state: GameState) {
 function ship_packages(state: GameState) {
 	if (state.res.pack_stored < 1)
 		return;
-	const eff = state.res.labor * 1.0 * state.res.efficiency;
+	const eff = state.res.labor * 1.0 * (1 + state.equip.belt) * state.res.efficiency;
 	if (eff <= state.res.orders && eff <= state.res.pack_stored) {
 		state.res.orders -= eff;
 		state.res.pack_stored -= eff;
@@ -275,14 +291,16 @@ function calculate_orders(state: GameState) {
 function calculate_effeciency(state: GameState): void {
 	const base_eff = 10;
 	let bonuses = state.res.eff_bonus;
+	let static_bonus = 0.5 * state.equip.belt;
 	let mw_ratio = state.res.manag / state.res.unsk_w;
 	if (isNaN(mw_ratio) || !isFinite(mw_ratio)) {
 		mw_ratio = 0;
 	}
 	if (mw_ratio > 0.3)
 		mw_ratio = 0.3;
-
-	state.res.efficiency = (base_eff + (100 + bonuses) * mw_ratio) * 1.0 /100;
+	if (state.upgrades.auto1)
+		static_bonus += 5;
+	state.res.efficiency = (base_eff + static_bonus + (100 + bonuses) * mw_ratio) * 1.0 /100;
 }
 
 function calculate_mark_eff(state: GameState): void {
@@ -355,7 +373,7 @@ function marketing_2() {
 	if (gstate.res.money >= gstate.prices.marketing2) {
 		document.getElementById("marketing2").style.display = "none";
 		gstate.upgrades.marketing2 = true;
-		gstate.res.base_mark_eff += 10;
+		gstate.res.base_mark_eff += 20;
 		gstate.res.money -= gstate.prices.marketing2;
 		gstate.res.base_ord += 10;
 		state_update(gstate);
@@ -411,6 +429,26 @@ function op_res_buy() {
 		document.getElementById("researcher-tab").style.display = "inline";
 		document.getElementById("op-res").style.display = "none";
 		gstate.upgrades.op_res = true;
+		state_update(gstate);
+	}
+}
+
+function buy_belt() {
+	if (gstate.res.money >= gstate.prices.belt) {
+		gstate.res.money -= gstate.prices.belt;
+		gstate.prices.belt *= 2;
+		gstate.equip.belt += 1;
+		state_update(gstate);
+	}
+}
+
+function automation1_res() {
+	if (gstate.res.rp >= gstate.prices.auto1) {
+		gstate.res.rp -= gstate.prices.auto1;
+		document.getElementById("automation1").style.display = "none";
+		document.getElementById("belt").style.display = "inline";
+		gstate.equip.belt = 1;
+		gstate.upgrades.auto1 = true;
 		state_update(gstate);
 	}
 }

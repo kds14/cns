@@ -47,14 +47,19 @@ var gstate = {
         marketing1: 200,
         marketing2: 10000,
         op_res: 3000,
-        auto1: 1000
+        auto1: 100,
+        belt: 10
     },
     upgrades: {
         basic1: false,
         marketing1: false,
         marketing2: false,
         op_res: false,
-        sci_manag: false
+        sci_manag: false,
+        auto1: false
+    },
+    equip: {
+        belt: 0
     }
 };
 init_upgrade_draw(gstate);
@@ -85,6 +90,10 @@ function draw_resource_bar(state) {
         document.getElementById("research-points").innerHTML =
             "Research Points (RP): " + state.res.rp;
         document.getElementById("research-points").title = "Used for research";
+    }
+    if (state.upgrades.auto1) {
+        document.getElementById("belt-text").innerHTML =
+            "Conveyer Belts: " + state.equip.belt + " [$" + state.prices.belt + "]";
     }
 }
 function draw_worker_area(state) {
@@ -117,7 +126,7 @@ function init_upgrade_draw(state) {
     document.getElementById("op-res-text").innerHTML =
         "Operations Research [$" + state.prices.op_res + "]";
     document.getElementById("automation1-text").innerHTML =
-        "Automation Research [" + state.prices.auto1 + "RP]";
+        "Automation Research I [" + state.prices.auto1 + "RP]";
 }
 function draw(state) {
     draw_resource_bar(state);
@@ -161,7 +170,7 @@ function receive_packages(state) {
     state.res.pack_rec += amnt;
 }
 function store_packages(state) {
-    var eff = state.res.labor * state.res.efficiency * 1.0;
+    var eff = state.res.labor * state.res.efficiency * 1.0 * (1 + 2 * state.equip.belt);
     if (eff <= state.res.pack_rec) {
         state.res.pack_rec -= eff;
         state.res.pack_stored += eff;
@@ -170,7 +179,7 @@ function store_packages(state) {
 function ship_packages(state) {
     if (state.res.pack_stored < 1)
         return;
-    var eff = state.res.labor * 1.0 * state.res.efficiency;
+    var eff = state.res.labor * 1.0 * (1 + state.equip.belt) * state.res.efficiency;
     if (eff <= state.res.orders && eff <= state.res.pack_stored) {
         state.res.orders -= eff;
         state.res.pack_stored -= eff;
@@ -191,13 +200,16 @@ function calculate_orders(state) {
 function calculate_effeciency(state) {
     var base_eff = 10;
     var bonuses = state.res.eff_bonus;
+    var static_bonus = 0.5 * state.equip.belt;
     var mw_ratio = state.res.manag / state.res.unsk_w;
     if (isNaN(mw_ratio) || !isFinite(mw_ratio)) {
         mw_ratio = 0;
     }
     if (mw_ratio > 0.3)
         mw_ratio = 0.3;
-    state.res.efficiency = (base_eff + (100 + bonuses) * mw_ratio) * 1.0 / 100;
+    if (state.upgrades.auto1)
+        static_bonus += 5;
+    state.res.efficiency = (base_eff + static_bonus + (100 + bonuses) * mw_ratio) * 1.0 / 100;
 }
 function calculate_mark_eff(state) {
     var base_eff = state.res.base_mark_eff;
@@ -261,7 +273,7 @@ function marketing_2() {
     if (gstate.res.money >= gstate.prices.marketing2) {
         document.getElementById("marketing2").style.display = "none";
         gstate.upgrades.marketing2 = true;
-        gstate.res.base_mark_eff += 10;
+        gstate.res.base_mark_eff += 20;
         gstate.res.money -= gstate.prices.marketing2;
         gstate.res.base_ord += 10;
         state_update(gstate);
@@ -310,6 +322,24 @@ function op_res_buy() {
         document.getElementById("researcher-tab").style.display = "inline";
         document.getElementById("op-res").style.display = "none";
         gstate.upgrades.op_res = true;
+        state_update(gstate);
+    }
+}
+function buy_belt() {
+    if (gstate.res.money >= gstate.prices.belt) {
+        gstate.res.money -= gstate.prices.belt;
+        gstate.prices.belt *= 2;
+        gstate.equip.belt += 1;
+        state_update(gstate);
+    }
+}
+function automation1_res() {
+    if (gstate.res.rp >= gstate.prices.auto1) {
+        gstate.res.rp -= gstate.prices.auto1;
+        document.getElementById("automation1").style.display = "none";
+        document.getElementById("belt").style.display = "inline";
+        gstate.equip.belt = 1;
+        gstate.upgrades.auto1 = true;
         state_update(gstate);
     }
 }
