@@ -1,33 +1,70 @@
 var tick_time = 1000;
+var gstate = {
+    time_prev: 0,
+    time: (new Date()).getTime(),
+    ticks: 0,
+    timers: {
+        wages: {
+            limit: 60,
+            prev: 0,
+            amnt: 0
+        },
+        pack: {
+            limit: 10,
+            prev: 0,
+            amnt: 1
+        }
+    },
+    res: {
+        money: 0,
+        unsk_w: 0,
+        manag: 0,
+        labor: 1,
+        efficiency: 10.0,
+        pack_rec: 0,
+        pack_stored: 0,
+        pack_shipped: 0,
+        pack_shipped_full: 0,
+        orders: 0,
+        base_rec: 10,
+        mark_eff: 0,
+        base_ord: 1,
+        base_sell: 10
+    },
+    prices: {
+        unsk_w: 9,
+        manag: 15,
+        basic1: 10
+    },
+    upgrades: {
+        basic1: false,
+        marketing1: false
+    }
+};
+update(gstate);
 /* Draw functions */
 function draw_resource_bar(state) {
-    var money_rate = (1.0 * state.timers.base.amnt) /
-        state.timers.base.limit;
-    var wages = (state.timers.wages.amnt);
-    var pm = money_rate;
-    var phr = 0 - wages;
     document.getElementById("money-stat").innerHTML =
-        "Money: $" + Math.floor(state.res.money) + " ($" + pm + "/min)"
-            + "($" + phr + "/hr)";
+        "Money: $" + Math.floor(state.res.money);
     document.getElementById("worker-stat").innerHTML =
-        "Employees: " + state.res.workers;
-    document.getElementById("worker-cap").innerHTML =
-        "Maximum Worker Capacity: " + state.res.worker_cap;
+        "Labor: " + state.res.labor;
     document.getElementById("worker-eff").innerHTML =
-        "Worker Efficiency: " + state.res.worker_eff + "%";
-    document.getElementById("max-pack-cap").innerHTML =
-        "Maximum Package Capacity: " + state.res.pack_cap;
+        "Efficiency: " + (state.res.efficiency * 100).toFixed(2) + "%";
+    document.getElementById("orders-stat").innerHTML =
+        "Pending Orders: " + Math.floor(state.res.orders);
     document.getElementById("pack-rec").innerHTML =
         "Received Packages: " + Math.floor(state.res.pack_rec);
     document.getElementById("pack-stored").innerHTML =
         "Stored Packages: " + Math.floor(state.res.pack_stored);
     document.getElementById("pack-shipped").innerHTML =
-        "Shipped Packages: " + Math.floor(state.res.pack_shipped);
+        "Shipped Packages: " + Math.floor(state.res.pack_shipped_full);
+    document.getElementById("marketing").innerHTML =
+        "Marketing Effeciency: " + (state.res.mark_eff * 100).toFixed(2) + "%";
 }
 function draw_worker_area(state) {
     document.getElementById("unskilled-text").innerHTML =
-        "Unskilled Workers: " + state.res.unsk_w + " ($"
-            + state.prices.unsk_w + "/hr)";
+        "Unskilled Workers: " + state.res.unsk_w + " [$"
+            + state.prices.unsk_w + "/hr]";
     document.getElementById("manager-text").innerHTML =
         "Managers: " + state.res.manag + " ($"
             + state.prices.manag + "/hr)";
@@ -49,16 +86,7 @@ function state_update(state) {
 }
 function tick(state) {
     state.ticks += 1;
-    if (state.ticks - state.timers.base.prev >=
-        state.timers.base.limit) {
-        state.res.money += state.timers.base.amnt;
-        state.timers.base.prev = state.ticks;
-    }
-    if (state.ticks - state.timers.wages.prev >=
-        state.timers.wages.limit) {
-        state.res.money -= state.timers.wages.amnt;
-        state.timers.wages.prev = state.ticks;
-    }
+    state.res.money -= (state.timers.wages.amnt * 1.0) / 10;
     handle_packages(state);
     state_update(state);
 }
@@ -70,155 +98,65 @@ function update(state) {
     }
     requestAnimationFrame((function () { return update(state); }));
 }
-var gstate = {
-    time_prev: 0,
-    time: (new Date()).getTime(),
-    ticks: 0,
-    timers: {
-        base: {
-            limit: 1,
-            prev: 0,
-            amnt: 1
-        },
-        wages: {
-            limit: 60,
-            prev: 0,
-            amnt: 0
-        },
-        pack: {
-            limit: 10,
-            prev: 0,
-            amnt: 1
-        }
-    },
-    res: {
-        money: 0,
-        unsk_w: 0,
-        manag: 0,
-        workers: 0,
-        worker_cap: 10,
-        worker_eff: 10.0,
-        pack_cap: 100,
-        pack_rec: 0,
-        pack_stored: 0,
-        pack_shipped: 0
-    },
-    prices: {
-        unsk_w: 9,
-        manag: 15,
-        basic1: 10
-    },
-    upgrades: {
-        basic1: false
-    }
-};
-update(gstate);
-function change_worker(add, state) {
-    if (add) {
-        if (state.res.workers < state.res.worker_cap) {
-            gstate.res.workers += 1;
-        }
-        else {
-            return false;
-        }
-    }
-    else {
-        if (state.res.workers > 0) {
-            gstate.res.workers -= 1;
-        }
-        else {
-            return false;
-        }
-    }
-    return true;
-}
 function handle_packages(state) {
-    if (state.ticks - state.timers.pack.prev >=
-        state.timers.pack.limit) {
-        var full = state.res.unsk_w * state.res.worker_eff * 1.0;
-        var store_half = Math.random() * full / 20;
-        var ship_half = Math.random() * full / 100;
-        console.log(store_half);
-        console.log(ship_half);
-        if (state.res.pack_stored >= 1) {
-            var mov_str2shp = ship_half;
-            if (mov_str2shp > state.res.pack_stored) {
-                mov_str2shp = state.res.pack_stored;
-            }
-            if (mov_str2shp >= 1) {
-                state.res.money += (80 * Math.random() + 20) * state.res.pack_rec;
-            }
-            state.res.pack_stored -= mov_str2shp;
-            state.res.pack_shipped += mov_str2shp;
-        }
-        if (state.res.pack_rec >= 1) {
-            var mov_rec2str = store_half;
-            if (mov_rec2str > state.res.pack_rec) {
-                mov_rec2str = state.res.pack_rec;
-            }
-            state.res.pack_rec -= mov_rec2str;
-            state.res.pack_stored += mov_rec2str;
-        }
-        if (state.res.pack_rec + state.res.pack_stored < state.res.pack_cap) {
-            var val = (state.timers.pack.amnt * state.res.pack_cap + 1) / 100;
-            state.res.pack_rec += (10.0 * Math.random() + 0.5) * val;
-            state.timers.pack.prev = state.ticks;
+    ship_packages(state);
+    calculate_orders(state);
+    store_packages(state);
+    receive_packages(state);
+}
+function receive_packages(state) {
+    var amnt = state.res.base_rec * 1.0 * state.res.mark_eff + state.res.base_rec * Math.random();
+    state.res.pack_rec += amnt;
+}
+function store_packages(state) {
+    var eff = state.res.labor * state.res.efficiency * 1.0;
+    if (eff <= state.res.pack_rec) {
+        state.res.pack_rec -= eff;
+        state.res.pack_stored += eff;
+    }
+}
+function ship_packages(state) {
+    var eff = state.res.labor * 1.0 * state.res.efficiency;
+    if (eff <= state.res.orders && eff <= state.res.pack_stored) {
+        state.res.orders -= eff;
+        state.res.pack_stored -= eff;
+        state.res.pack_shipped += eff;
+        if (state.res.pack_shipped >= 1) {
+            var f = Math.floor(state.res.pack_shipped);
+            state.res.pack_shipped -= f;
+            state.res.pack_shipped_full += f;
+            var gain = state.res.mark_eff * state.res.base_sell + state.res.base_sell + 10.0 * Math.random();
+            state.res.money += f * gain;
         }
     }
+}
+function calculate_orders(state) {
+    var eff = state.res.base_ord * state.res.mark_eff * 1.0 + state.res.base_ord * Math.random();
+    state.res.orders += eff;
 }
 function calculate_effeciency(state) {
     var base_eff = 10;
     var bonuses = 0;
-    var mw_diff = state.res.workers - state.res.manag;
-    if (mw_diff <= 0) {
-        state.res.worker_eff = 0;
-        return;
+    var mw_ratio = state.res.manag / state.res.unsk_w;
+    if (isNaN(mw_ratio) || !isFinite(mw_ratio)) {
+        mw_ratio = 0;
     }
-    var mwr = 0;
-    if (state.res.manag > 5) {
-        mwr = (mw_diff * 1.0 / state.res.manag);
-        if (mwr < 2) {
-            mwr = -20;
-        }
-        else if (mwr < 4 || mwr > 30) {
-            mwr = -10;
-        }
-        else if (mwr < 8 || mwr > 20) {
-            mwr = 5;
-        }
-        else if (mwr < 10 || mwr > 15) {
-            mwr = 10;
-        }
-        else if (mwr == 10) {
-            mwr = 25;
-        }
-        else {
-            mwr = 15;
-        }
-        if (state.res.manag > 10) {
-            mwr *= 1.25;
-        }
-        else if (state.res.manag > 100) {
-            mwr *= 1.5;
-        }
-    }
-    else if (state.res.manag > 0) {
-        mwr = 10;
-    }
-    state.res.worker_eff = base_eff + mwr + bonuses;
+    if (mw_ratio > 0.3)
+        mw_ratio = 0.3;
+    state.res.efficiency = (base_eff + (100 + bonuses) * mw_ratio) * 1.0 / 100;
 }
 /* onclick functions */
 function unskilled_hire() {
-    if (change_worker(true, gstate)) {
-        gstate.timers.wages.amnt += gstate.prices.unsk_w;
-        gstate.res.unsk_w += 1;
-        state_update(gstate);
-    }
+    gstate.timers.wages.amnt += gstate.prices.unsk_w;
+    gstate.res.unsk_w += 1;
+    gstate.res.labor += 1;
+    state_update(gstate);
 }
 function unskilled_fire() {
-    if (change_worker(false, gstate)) {
+    if (gstate.res.unsk_w > 0) {
         gstate.timers.wages.amnt -= gstate.prices.unsk_w;
         gstate.res.unsk_w -= 1;
+        gstate.res.labor -= 1;
         state_update(gstate);
     }
 }
@@ -232,14 +170,12 @@ function basic_research_1() {
     }
 }
 function manager_hire() {
-    if (change_worker(true, gstate)) {
-        gstate.timers.wages.amnt += gstate.prices.manag;
-        gstate.res.manag += 1;
-        state_update(gstate);
-    }
+    gstate.timers.wages.amnt += gstate.prices.manag;
+    gstate.res.manag += 1;
+    state_update(gstate);
 }
 function manager_fire() {
-    if (change_worker(false, gstate)) {
+    if (gstate.res.manag > 0) {
         gstate.timers.wages.amnt -= gstate.prices.unsk_w;
         gstate.res.manag -= 1;
         state_update(gstate);
