@@ -10,8 +10,8 @@
 		<div id="money-stat"></div>
 		<div id="worker-stat" title="Amount of labor from workers and machines"></div>
 		<div id="worker-eff" title="Effectiveness of storing and shipping packages"></div>
-		<div id="marketing" title="Affects packages and orders received"></div>
-		<div></div>
+		<div id="marketing"></div>
+		<div id="research-points"></div>
 		<div></div>
 		<div id="pack-rec" title="Packages waiting to be stored"></div>
 		<div id="pack-stored"></div>
@@ -53,16 +53,42 @@
 			Fire
 			</button>
 		</div>
+		<div id="researcher-tab" style="display:none" title="Generates research points">
+			<div id="researcher-text">
+			</div>
+			<button id="res-hire" class="cbtn" onclick="res_hire()">
+			Hire
+			</button>
+			<button id="res-fire" class="cbtn" onclick="res_fire()">
+			Fire
+			</button>
+		</div>
 	</div>
 	<div id="upgrade-area">
 		<div class="centered-text">Upgrades</div>
 		<div id="basic-res-1" title="Unlocks managers">
-			<div>Basic Business Research I [$100]</div>
+			<div id="basic-res-1-text"></div>
 			<button id="basic-res-1-buy" class="cbtn" onclick="basic_research_1()">Buy</button>
 		</div>
 		<div id="marketing1" style="display:none" title="Unlocks marketers and increases orders">
-			<div>Marketing I [$200]</div>
+			<div id="mark-1-text"></div>
 			<button id="mark1-buy" class="cbtn" onclick="marketing_1()">Buy</button>
+		</div>
+		<div id="marketing2" style="display:none" title="Improves marketer effectiveness and amount of orders received.">
+			<div id="mark-2-text"></div>
+			<button class="cbtn" onclick="marketing_2()">Buy</button>
+		</div>
+		<div id="scientific-manag" style="display:none" title="Improves managers and unlocks new upgrades">
+			<div id="sci-manag-text"></div>
+			<button id="sci-manag-buy" class="cbtn" onclick="sci_manag_buy()">Buy</button>
+		</div>
+		<div id="op-res" style="display:none" title="Unlocks Researcher and research points">
+			<div id="op-res-text"></div>
+			<button class="cbtn" onclick="op_res_buy()">Buy</button>
+		</div>
+		<div id="automation1" style="display:none" title="Unlocks new automation research and conveyer belts">
+			<div id="automation1-text"></div>
+			<button class="cbtn" onclick="automation1_res()">Research</button>
 		</div>
 	</div>
 	<div id="green">GREEN</div>
