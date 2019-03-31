@@ -21,6 +21,11 @@ interface Resources {
 	base_mark_eff: number;
 }
 
+interface Stats {
+	money_avg: number;
+	money_past: Array<number>;
+}
+
 interface Prices {
 	unsk_w: number;
 	manag: number;
@@ -68,11 +73,16 @@ interface GameState {
 	prices: Prices;
 	upgrades: Upgrades;
 	equip: Equip;
+	stats: Stats
 }
 
 const tick_time = 1000;
 
 let gstate = {
+	stats: {
+		money_avg: 0,
+		money_past: []
+	},
 	time_prev: 0,
 	time:(new Date()).getTime(),
 	ticks: 0,
@@ -171,7 +181,7 @@ function draw_resource_bar(state: GameState) {
 	}
 	if (state.upgrades.auto1) {
 	document.getElementById("belt-text").innerHTML =
-		"Conveyer Belts: " + state.equip.belt + " [$" + state.prices.belt + "]";
+		"Conveyer Belts: Level " + state.equip.belt + " [$" + state.prices.belt + "]";
 	}
 }
 
@@ -229,10 +239,28 @@ function state_update(state: GameState) {
 	unhide(state);
 }
 
+function calc_money_avg(state: GameState, before: number) {
+	const delta = state.res.money - before;
+	state.stats.money_past.push(delta);
+	let len = state.stats.money_past.length;
+	while (len > 60) {
+		state.stats.money_past.shift();
+		len--;
+	}
+	let sum = 0;
+	for (let i = 0; i < len; ++i) {
+		sum += state.stats.money_past[i];
+	}
+	state.stats.money_avg = (sum * 1.0 / len);
+}
+
 function tick(state: GameState) {
 	state.ticks += 1;
+	const before = state.res.money;
 	state.res.money -= (state.timers.wages.amnt * 1.0) / 60;
 	handle_packages(state);
+	calc_money_avg(state, before);
+	console.log((state.stats));
 	state_update(state);
 }
 
@@ -268,7 +296,7 @@ function store_packages(state: GameState) {
 function ship_packages(state: GameState) {
 	if (state.res.pack_stored < 1)
 		return;
-	const eff = state.res.labor * 1.0 * (1 + state.equip.belt) * state.res.efficiency;
+	const eff = state.res.labor * 0.25 * (1 + state.equip.belt) * state.res.efficiency;
 	if (eff <= state.res.orders && eff <= state.res.pack_stored) {
 		state.res.orders -= eff;
 		state.res.pack_stored -= eff;

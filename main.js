@@ -1,5 +1,9 @@
 var tick_time = 1000;
 var gstate = {
+    stats: {
+        money_avg: 0,
+        money_past: []
+    },
     time_prev: 0,
     time: (new Date()).getTime(),
     ticks: 0,
@@ -93,7 +97,7 @@ function draw_resource_bar(state) {
     }
     if (state.upgrades.auto1) {
         document.getElementById("belt-text").innerHTML =
-            "Conveyer Belts: " + state.equip.belt + " [$" + state.prices.belt + "]";
+            "Conveyer Belts: Level " + state.equip.belt + " [$" + state.prices.belt + "]";
     }
 }
 function draw_worker_area(state) {
@@ -145,10 +149,27 @@ function state_update(state) {
     draw(state);
     unhide(state);
 }
+function calc_money_avg(state, before) {
+    var delta = state.res.money - before;
+    state.stats.money_past.push(delta);
+    var len = state.stats.money_past.length;
+    while (len > 60) {
+        state.stats.money_past.shift();
+        len--;
+    }
+    var sum = 0;
+    for (var i = 0; i < len; ++i) {
+        sum += state.stats.money_past[i];
+    }
+    state.stats.money_avg = (sum * 1.0 / len);
+}
 function tick(state) {
     state.ticks += 1;
+    var before = state.res.money;
     state.res.money -= (state.timers.wages.amnt * 1.0) / 60;
     handle_packages(state);
+    calc_money_avg(state, before);
+    console.log((state.stats));
     state_update(state);
 }
 function update(state) {
@@ -179,7 +200,7 @@ function store_packages(state) {
 function ship_packages(state) {
     if (state.res.pack_stored < 1)
         return;
-    var eff = state.res.labor * 1.0 * (1 + state.equip.belt) * state.res.efficiency;
+    var eff = state.res.labor * 0.25 * (1 + state.equip.belt) * state.res.efficiency;
     if (eff <= state.res.orders && eff <= state.res.pack_stored) {
         state.res.orders -= eff;
         state.res.pack_stored -= eff;
