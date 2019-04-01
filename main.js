@@ -39,7 +39,10 @@ var gstate = {
         base_ord: 1,
         base_sell: 10,
         eff_bonus: 0,
-        base_mark_eff: 10
+        base_mark_eff: 10,
+        worker_max: 10,
+        pack_max: 200,
+        belt: 0
     },
     prices: {
         unsk_w: 9,
@@ -52,7 +55,9 @@ var gstate = {
         marketing2: 10000,
         op_res: 3000,
         auto1: 100,
-        belt: 10
+        belt: 1000,
+        worker_cap: 500,
+        storage_cap: 200
     },
     upgrades: {
         basic1: false,
@@ -61,9 +66,6 @@ var gstate = {
         op_res: false,
         sci_manag: false,
         auto1: false
-    },
-    equip: {
-        belt: 0
     }
 };
 init_upgrade_draw(gstate);
@@ -97,8 +99,12 @@ function draw_resource_bar(state) {
     }
     if (state.upgrades.auto1) {
         document.getElementById("belt-text").innerHTML =
-            "Conveyer Belts: Level " + state.equip.belt + " [$" + state.prices.belt + "]";
+            "Conveyer Belt System: Level " + state.res.belt + " [$" + state.prices.belt + "]";
     }
+    document.getElementById("storage-cap-text").innerHTML =
+        "Package Capacity: " + state.res.pack_max + " [$" + state.prices.storage_cap + "]";
+    document.getElementById("worker-cap-text").innerHTML =
+        "Worker Capacity: " + state.res.worker_max + " [$" + state.prices.worker_cap + "]";
 }
 function draw_worker_area(state) {
     document.getElementById("unskilled-text").innerHTML =
@@ -188,10 +194,11 @@ function handle_packages(state) {
 }
 function receive_packages(state) {
     var amnt = state.res.base_rec * 1.0 * state.res.mark_eff + state.res.base_rec * Math.random();
-    state.res.pack_rec += amnt;
+    var diff = add_package(state, amnt);
+    state.res.pack_rec += diff;
 }
 function store_packages(state) {
-    var eff = state.res.labor * state.res.efficiency * 1.0 * (1 + 2 * state.equip.belt);
+    var eff = state.res.labor * state.res.efficiency * 1.0 * (1 + 2 * state.res.belt);
     if (eff <= state.res.pack_rec) {
         state.res.pack_rec -= eff;
         state.res.pack_stored += eff;
@@ -200,7 +207,7 @@ function store_packages(state) {
 function ship_packages(state) {
     if (state.res.pack_stored < 1)
         return;
-    var eff = state.res.labor * 0.25 * (1 + state.equip.belt) * state.res.efficiency;
+    var eff = state.res.labor * 0.25 * (1 + state.res.belt) * state.res.efficiency;
     if (eff <= state.res.orders && eff <= state.res.pack_stored) {
         state.res.orders -= eff;
         state.res.pack_stored -= eff;
@@ -221,7 +228,7 @@ function calculate_orders(state) {
 function calculate_effeciency(state) {
     var base_eff = 10;
     var bonuses = state.res.eff_bonus;
-    var static_bonus = 0.5 * state.equip.belt;
+    var static_bonus = 0.5 * state.res.belt;
     var mw_ratio = state.res.manag / state.res.unsk_w;
     if (isNaN(mw_ratio) || !isFinite(mw_ratio)) {
         mw_ratio = 0;
@@ -251,12 +258,29 @@ function calculate_research(state) {
     if (state.upgrades.op_res)
         state.res.rp += state.res.researcher;
 }
+function buy_worker(state) {
+    var w = state.res.unsk_w + state.res.manag + state.res.marketer
+        + state.res.researcher + 1;
+    return w <= state.res.worker_max;
+}
+function add_package(state, add) {
+    var p = state.res.pack_rec + state.res.pack_stored + add;
+    var diff = state.res.pack_max - p + 1;
+    var res = add;
+    if (diff < 0)
+        res += diff;
+    if (res < 0)
+        res = 0;
+    return res;
+}
 /* onclick functions */
 function unskilled_hire() {
-    gstate.timers.wages.amnt += gstate.prices.unsk_w;
-    gstate.res.unsk_w += 1;
-    gstate.res.labor += 1;
-    state_update(gstate);
+    if (buy_worker(gstate)) {
+        gstate.timers.wages.amnt += gstate.prices.unsk_w;
+        gstate.res.unsk_w += 1;
+        gstate.res.labor += 1;
+        state_update(gstate);
+    }
 }
 function unskilled_fire() {
     if (gstate.res.unsk_w > 0) {
@@ -301,9 +325,11 @@ function marketing_2() {
     }
 }
 function manager_hire() {
-    gstate.timers.wages.amnt += gstate.prices.manag;
-    gstate.res.manag += 1;
-    state_update(gstate);
+    if (buy_worker(gstate)) {
+        gstate.timers.wages.amnt += gstate.prices.manag;
+        gstate.res.manag += 1;
+        state_update(gstate);
+    }
 }
 function manager_fire() {
     if (gstate.res.manag > 0) {
@@ -313,9 +339,11 @@ function manager_fire() {
     }
 }
 function marketer_hire() {
-    gstate.timers.wages.amnt += gstate.prices.marketer;
-    gstate.res.marketer += 1;
-    state_update(gstate);
+    if (buy_worker(gstate)) {
+        gstate.timers.wages.amnt += gstate.prices.marketer;
+        gstate.res.marketer += 1;
+        state_update(gstate);
+    }
 }
 function marketer_fire() {
     if (gstate.res.marketer > 0) {
@@ -325,9 +353,11 @@ function marketer_fire() {
     }
 }
 function res_hire() {
-    gstate.timers.wages.amnt += gstate.prices.researcher;
-    gstate.res.researcher += 1;
-    state_update(gstate);
+    if (buy_worker(gstate)) {
+        gstate.timers.wages.amnt += gstate.prices.researcher;
+        gstate.res.researcher += 1;
+        state_update(gstate);
+    }
 }
 function res_fire() {
     if (gstate.res.researcher > 0) {
@@ -349,8 +379,25 @@ function op_res_buy() {
 function buy_belt() {
     if (gstate.res.money >= gstate.prices.belt) {
         gstate.res.money -= gstate.prices.belt;
-        gstate.prices.belt *= 2;
-        gstate.equip.belt += 1;
+        gstate.prices.belt = Math.round(gstate.prices.belt * 2);
+        gstate.res.pack_max = Math.round(gstate.res.pack_max * 2);
+        gstate.res.belt += 1;
+        state_update(gstate);
+    }
+}
+function buy_storage_cap() {
+    if (gstate.res.money >= gstate.prices.storage_cap) {
+        gstate.res.money -= gstate.prices.storage_cap;
+        gstate.prices.storage_cap = Math.round(gstate.prices.storage_cap * 1.5);
+        gstate.res.pack_max = Math.round(gstate.res.pack_max * 2);
+        state_update(gstate);
+    }
+}
+function buy_worker_cap() {
+    if (gstate.res.money >= gstate.prices.worker_cap) {
+        gstate.res.money -= gstate.prices.worker_cap;
+        gstate.prices.worker_cap = Math.round(gstate.prices.worker_cap * 1.5);
+        gstate.res.worker_max = Math.round(gstate.res.worker_max * 2);
         state_update(gstate);
     }
 }
@@ -359,7 +406,7 @@ function automation1_res() {
         gstate.res.rp -= gstate.prices.auto1;
         document.getElementById("automation1").style.display = "none";
         document.getElementById("belt").style.display = "inline";
-        gstate.equip.belt = 1;
+        gstate.res.belt = 1;
         gstate.upgrades.auto1 = true;
         state_update(gstate);
     }
