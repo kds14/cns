@@ -22,6 +22,7 @@ interface Resources {
 	belt: number;
 	worker_max: number;
 	pack_max: number;
+	robocallers: number;
 }
 
 interface Stats {
@@ -46,6 +47,9 @@ interface Prices {
 	comp_sys_rp: number;
 	comp_sys: number;
 	bus_anal: number;
+	auto_ad: number;
+	auto_ad_rp: number;
+	robocallers: number;
 }
 
 interface Timer {
@@ -67,6 +71,7 @@ interface Upgrades {
 	auto1: Boolean,
 	comp_sys: Boolean,
 	bus_anal: Boolean,
+	auto_ad: Boolean,
 }
 
 interface GameState {
@@ -98,8 +103,8 @@ let gstate = {
 		}
 	},
 	res: {
+		money: 100000,
 		rp: 0,
-		money: 0,
 		unsk_w: 0,
 		manag: 0,
 		marketer: 0,
@@ -121,6 +126,7 @@ let gstate = {
 		worker_max: 10,
 		pack_max: 200,
 		belt: 0,
+		robocallers: 0,
 	},
 	prices: {
 		unsk_w: 9,
@@ -130,15 +136,18 @@ let gstate = {
 		basic1: 100,
 		marketer: 20,
 		marketing1: 200,
-		marketing2: 10000,
+		marketing2: 8000,
 		op_res: 2000,
-		auto1: 100,
-		belt: 1000,
+		auto1: 500,
+		belt: 5000,
 		worker_cap: 200,
 		storage_cap: 200,
 		comp_sys_rp: 1000,
 		comp_sys: 10000,
 		bus_anal: 1000,
+		auto_ad_rp: 5000,
+		auto_ad: 20000,
+		robocallers: 10000,
 	},
 	upgrades: {
 		basic1: false,
@@ -149,6 +158,7 @@ let gstate = {
 		auto1: false,
 		comp_sys: false,
 		bus_anal: false,
+		auto_ad: false,
 	},
 }
 
@@ -191,12 +201,19 @@ function draw_resource_bar(state: GameState) {
 	document.getElementById("belt-text").innerHTML =
 		"Conveyer Belt System: Level " + state.res.belt + " [$" + state.prices.belt + "]";
 	}
+	if (state.upgrades.auto_ad) {
+	document.getElementById("robocaller-text").innerHTML =
+		"Robocaller System: Level " + state.res.robocallers + " [$" + state.prices.robocallers + "]";
+	}
 	document.getElementById("storage-cap-text").innerHTML =
 		"Package Capacity: " + state.res.pack_max + " [$" + state.prices.storage_cap + "]";
 	document.getElementById("worker-cap-text").innerHTML =
 		"Worker Capacity: " + state.res.worker_max + " [$" + state.prices.worker_cap + "]";
 	if (!state.upgrades.comp_sys && state.upgrades.auto1) {
 		document.getElementById("computer-systems").style.display = "inline";
+	}
+	if (!state.upgrades.auto_ad && state.upgrades.comp_sys && state.upgrades.marketing2) {
+		document.getElementById("auto-ad").style.display = "inline";
 	}
 }
 
@@ -233,6 +250,9 @@ function init_upgrade_draw(state: GameState) {
 		+ state.prices.comp_sys_rp + "RP]";
 	document.getElementById("bus-anal-text").innerHTML =
 		"Business Analytics [$" + state.prices.bus_anal + "]";
+	document.getElementById("auto-ad-text").innerHTML =
+		"Automated Advertisement [$" + state.prices.auto_ad + ", "
+		+ state.prices.auto_ad_rp + "RP]";
 }
 
 function draw(state: GameState) {
@@ -296,25 +316,30 @@ function handle_packages(state: GameState) {
 }
 
 function receive_packages(state: GameState) {
-	const amnt = state.res.base_rec * 1.0 * state.res.mark_eff + state.res.base_rec * Math.random();
+	const amnt = state.res.base_rec * 1.0 * state.res.mark_eff + state.res.base_rec + state.res.base_rec * Math.random() / 2.0;
 	const diff = add_package(state, amnt);
 	state.res.pack_rec += diff;
-		
 }
 
 function store_packages(state: GameState) {
-	const eff = state.res.labor * state.res.efficiency * 1.0 * (1 + 2 * state.res.belt);
-	if (eff <= state.res.pack_rec) {
+	const eff = state.res.labor * state.res.efficiency * 1.0 * (1 + 1.25 * state.res.belt);
+	if (eff < state.res.pack_rec) {
 		state.res.pack_rec -= eff;
 		state.res.pack_stored += eff;
+	} else {
+		state.res.pack_stored += state.res.pack_rec;
+		state.res.pack_rec = 0;
 	}
 }
 
 function ship_packages(state: GameState) {
 	if (state.res.pack_stored < 1)
 		return;
-	const eff = state.res.labor * 0.25 * (1 + state.res.belt) * state.res.efficiency;
-	if (eff <= state.res.orders && eff <= state.res.pack_stored) {
+	let eff = state.res.labor * 0.25 * (1 + state.res.belt) * state.res.efficiency;
+	const min = Math.min(state.res.orders, state.res.pack_stored)
+	if (eff > min)
+		eff = min;
+	if (eff > 0) {
 		state.res.orders -= eff;
 		state.res.pack_stored -= eff;
 		state.res.pack_shipped += eff;
@@ -329,8 +354,10 @@ function ship_packages(state: GameState) {
 }
 
 function calculate_orders(state: GameState) {
-	const eff = state.res.base_ord * state.res.mark_eff * 1.0 + state.res.base_ord * Math.random();
+	const eff = state.res.base_ord * state.res.mark_eff * 1.0 + state.res.base_ord + state.res.base_ord * Math.random() / 2.0;
 	state.res.orders += eff;
+	if (state.res.orders > state.res.pack_max)
+		state.res.orders = state.res.pack_max
 }
 
 function calculate_effeciency(state: GameState): void {
@@ -362,7 +389,7 @@ function calculate_mark_eff(state: GameState): void {
 		marketer_bonus = 0;
 	}
 
-	state.res.mark_eff = (base_eff + marketer_bonus) * 1.0 /100;
+	state.res.mark_eff = (state.res.robocallers * 10.0 + (base_eff + marketer_bonus) * 2.0) / 100.0;
 }
 
 function calculate_research(state: GameState) {
@@ -423,7 +450,7 @@ function marketing_2() {
 		gstate.upgrades.marketing2 = true;
 		gstate.res.base_mark_eff += 20;
 		gstate.res.money -= gstate.prices.marketing2;
-		gstate.res.base_ord += 10;
+		gstate.res.base_ord += 20;
 		state_update(gstate);
 	}
 }
@@ -435,17 +462,29 @@ function automation1_res() {
 		document.getElementById("belt").style.display = "inline";
 		gstate.res.belt = 1;
 		gstate.upgrades.auto1 = true;
+		gstate.res.eff_bonus += 10;
 		state_update(gstate);
 	}
 }
 
-function comp_sys_buy() {
+function comp_sys_res() {
 	if (gstate.res.rp >= gstate.prices.comp_sys_rp &&
 		gstate.res.money >= gstate.prices.comp_sys) {
 		gstate.res.rp -= gstate.prices.comp_sys_rp;
 		gstate.res.money -= gstate.prices.comp_sys;
 		document.getElementById("computer-systems").style.display = "none";
 		gstate.upgrades.comp_sys = true;
+		state_update(gstate);
+	}
+}
+
+function auto_ad_res() {
+	if (gstate.res.rp >= gstate.prices.auto_ad_rp &&
+		gstate.res.money >= gstate.prices.auto_ad) {
+		gstate.res.rp -= gstate.prices.auto_ad_rp;
+		gstate.res.money -= gstate.prices.auto_ad;
+		document.getElementById("auto-ad").style.display = "none";
+		gstate.upgrades.auto_ad = true;
 		state_update(gstate);
 	}
 }
@@ -549,8 +588,16 @@ function buy_belt() {
 	if (gstate.res.money >= gstate.prices.belt) {
 		gstate.res.money -= gstate.prices.belt;
 		gstate.prices.belt = Math.round(gstate.prices.belt * 2);
-		gstate.res.pack_max = Math.round(gstate.res.pack_max * 2);
 		gstate.res.belt += 1;
+		state_update(gstate);
+	}
+}
+
+function buy_robocaller() {
+	if (gstate.res.money >= gstate.prices.robocallers) {
+		gstate.res.money -= gstate.prices.robocallers;
+		gstate.prices.belt = Math.round(gstate.prices.robocallers * 3);
+		gstate.res.robocallers += 1;
 		state_update(gstate);
 	}
 }
