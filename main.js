@@ -8,11 +8,6 @@ var gstate = {
     time: (new Date()).getTime(),
     ticks: 0,
     timers: {
-        wages: {
-            limit: 60,
-            prev: 0,
-            amnt: 0
-        },
         pack: {
             limit: 10,
             prev: 0,
@@ -48,16 +43,19 @@ var gstate = {
         unsk_w: 9,
         manag: 15,
         researcher: 30,
-        sci_manag: 1000,
+        sci_manag: 500,
         basic1: 100,
         marketer: 20,
         marketing1: 200,
         marketing2: 10000,
-        op_res: 3000,
+        op_res: 2000,
         auto1: 100,
         belt: 1000,
-        worker_cap: 500,
-        storage_cap: 200
+        worker_cap: 200,
+        storage_cap: 200,
+        comp_sys_rp: 1000,
+        comp_sys: 10000,
+        bus_anal: 1000
     },
     upgrades: {
         basic1: false,
@@ -65,15 +63,21 @@ var gstate = {
         marketing2: false,
         op_res: false,
         sci_manag: false,
-        auto1: false
+        auto1: false,
+        comp_sys: false,
+        bus_anal: false
     }
 };
 init_upgrade_draw(gstate);
 update(gstate);
 /* Draw functions */
 function draw_resource_bar(state) {
+    var money_rate = "";
+    if (state.upgrades.bus_anal) {
+        money_rate = " ($" + (state.stats.money_avg).toFixed(2) + "/fr)";
+    }
     document.getElementById("money-stat").innerHTML =
-        "Money: $" + Math.floor(state.res.money);
+        "Money: $" + Math.floor(state.res.money) + money_rate;
     document.getElementById("worker-stat").innerHTML =
         "Labor: " + state.res.labor;
     document.getElementById("worker-eff").innerHTML =
@@ -105,23 +109,22 @@ function draw_resource_bar(state) {
         "Package Capacity: " + state.res.pack_max + " [$" + state.prices.storage_cap + "]";
     document.getElementById("worker-cap-text").innerHTML =
         "Worker Capacity: " + state.res.worker_max + " [$" + state.prices.worker_cap + "]";
+    if (!state.upgrades.comp_sys && state.upgrades.auto1) {
+        document.getElementById("computer-systems").style.display = "inline";
+    }
 }
 function draw_worker_area(state) {
     document.getElementById("unskilled-text").innerHTML =
-        "Unskilled Workers: " + state.res.unsk_w + " [$"
-            + state.prices.unsk_w + "/hr]";
+        "Unskilled Workers: " + state.res.unsk_w;
     document.getElementById("manager-text").innerHTML =
-        "Managers: " + state.res.manag + " [$"
-            + state.prices.manag + "/hr]";
+        "Managers: " + state.res.manag;
     if (state.upgrades.marketing1) {
         document.getElementById("marketer-text").innerHTML =
-            "Marketers: " + state.res.marketer + " [$"
-                + state.prices.marketer + "/hr]";
+            "Marketers: " + state.res.marketer;
     }
     if (state.upgrades.op_res) {
         document.getElementById("researcher-text").innerHTML =
-            "Researchers: " + state.res.researcher + " [$"
-                + state.prices.researcher + "/hr]";
+            "Researchers: " + state.res.researcher;
     }
 }
 function init_upgrade_draw(state) {
@@ -137,6 +140,11 @@ function init_upgrade_draw(state) {
         "Operations Research [$" + state.prices.op_res + "]";
     document.getElementById("automation1-text").innerHTML =
         "Automation Research I [" + state.prices.auto1 + "RP]";
+    document.getElementById("comp-sys-text").innerHTML =
+        "Computer Systems Research [$" + state.prices.comp_sys + ", "
+            + state.prices.comp_sys_rp + "RP]";
+    document.getElementById("bus-anal-text").innerHTML =
+        "Business Analytics [$" + state.prices.bus_anal + "]";
 }
 function draw(state) {
     draw_resource_bar(state);
@@ -172,10 +180,9 @@ function calc_money_avg(state, before) {
 function tick(state) {
     state.ticks += 1;
     var before = state.res.money;
-    state.res.money -= (state.timers.wages.amnt * 1.0) / 60;
     handle_packages(state);
     calc_money_avg(state, before);
-    console.log((state.stats));
+    //console.log((state.stats));
     state_update(state);
 }
 function update(state) {
@@ -274,22 +281,7 @@ function add_package(state, add) {
     return res;
 }
 /* onclick functions */
-function unskilled_hire() {
-    if (buy_worker(gstate)) {
-        gstate.timers.wages.amnt += gstate.prices.unsk_w;
-        gstate.res.unsk_w += 1;
-        gstate.res.labor += 1;
-        state_update(gstate);
-    }
-}
-function unskilled_fire() {
-    if (gstate.res.unsk_w > 0) {
-        gstate.timers.wages.amnt -= gstate.prices.unsk_w;
-        gstate.res.unsk_w -= 1;
-        gstate.res.labor -= 1;
-        state_update(gstate);
-    }
-}
+/* research */
 function basic_research_1() {
     if (gstate.res.money >= gstate.prices.basic1) {
         document.getElementById("basic-res-1").style.display = "none";
@@ -324,44 +316,92 @@ function marketing_2() {
         state_update(gstate);
     }
 }
+function automation1_res() {
+    if (gstate.res.rp >= gstate.prices.auto1) {
+        gstate.res.rp -= gstate.prices.auto1;
+        document.getElementById("automation1").style.display = "none";
+        document.getElementById("belt").style.display = "inline";
+        gstate.res.belt = 1;
+        gstate.upgrades.auto1 = true;
+        state_update(gstate);
+    }
+}
+function comp_sys_buy() {
+    if (gstate.res.rp >= gstate.prices.comp_sys_rp &&
+        gstate.res.money >= gstate.prices.comp_sys) {
+        gstate.res.rp -= gstate.prices.comp_sys_rp;
+        gstate.res.money -= gstate.prices.comp_sys;
+        document.getElementById("computer-systems").style.display = "none";
+        gstate.upgrades.comp_sys = true;
+        state_update(gstate);
+    }
+}
+function bus_anal_buy() {
+    if (gstate.res.money >= gstate.prices.bus_anal) {
+        gstate.res.money -= gstate.prices.bus_anal;
+        document.getElementById("bus-anal").style.display = "none";
+        gstate.upgrades.bus_anal = true;
+        state_update(gstate);
+    }
+}
+function sci_manag_buy() {
+    if (gstate.res.money >= gstate.prices.sci_manag) {
+        document.getElementById("scientific-manag").style.display = "none";
+        document.getElementById("op-res").style.display = "inline";
+        document.getElementById("bus-anal").style.display = "inline";
+        gstate.upgrades.sci_manag = true;
+        gstate.res.eff_bonus += 10;
+        gstate.res.marketer_base_bonus += 5;
+        state_update(gstate);
+    }
+}
+/* Workers */
+function unskilled_hire() {
+    if (buy_worker(gstate)) {
+        gstate.res.unsk_w += 1;
+        gstate.res.labor += 1;
+        state_update(gstate);
+    }
+}
+function unskilled_fire() {
+    if (gstate.res.unsk_w > 0) {
+        gstate.res.unsk_w -= 1;
+        gstate.res.labor -= 1;
+        state_update(gstate);
+    }
+}
 function manager_hire() {
     if (buy_worker(gstate)) {
-        gstate.timers.wages.amnt += gstate.prices.manag;
         gstate.res.manag += 1;
         state_update(gstate);
     }
 }
 function manager_fire() {
     if (gstate.res.manag > 0) {
-        gstate.timers.wages.amnt -= gstate.prices.manag;
         gstate.res.manag -= 1;
         state_update(gstate);
     }
 }
 function marketer_hire() {
     if (buy_worker(gstate)) {
-        gstate.timers.wages.amnt += gstate.prices.marketer;
         gstate.res.marketer += 1;
         state_update(gstate);
     }
 }
 function marketer_fire() {
     if (gstate.res.marketer > 0) {
-        gstate.timers.wages.amnt -= gstate.prices.marketer;
         gstate.res.marketer -= 1;
         state_update(gstate);
     }
 }
 function res_hire() {
     if (buy_worker(gstate)) {
-        gstate.timers.wages.amnt += gstate.prices.researcher;
         gstate.res.researcher += 1;
         state_update(gstate);
     }
 }
 function res_fire() {
     if (gstate.res.researcher > 0) {
-        gstate.timers.wages.amnt -= gstate.prices.researcher;
         gstate.res.researcher -= 1;
         state_update(gstate);
     }
@@ -376,6 +416,7 @@ function op_res_buy() {
         state_update(gstate);
     }
 }
+/* Upgrades */
 function buy_belt() {
     if (gstate.res.money >= gstate.prices.belt) {
         gstate.res.money -= gstate.prices.belt;
@@ -389,35 +430,16 @@ function buy_storage_cap() {
     if (gstate.res.money >= gstate.prices.storage_cap) {
         gstate.res.money -= gstate.prices.storage_cap;
         gstate.prices.storage_cap = Math.round(gstate.prices.storage_cap * 1.5);
-        gstate.res.pack_max = Math.round(gstate.res.pack_max * 2);
+        gstate.res.pack_max = Math.round(gstate.res.pack_max * 1.75);
         state_update(gstate);
     }
 }
 function buy_worker_cap() {
     if (gstate.res.money >= gstate.prices.worker_cap) {
         gstate.res.money -= gstate.prices.worker_cap;
-        gstate.prices.worker_cap = Math.round(gstate.prices.worker_cap * 1.5);
-        gstate.res.worker_max = Math.round(gstate.res.worker_max * 2);
-        state_update(gstate);
-    }
-}
-function automation1_res() {
-    if (gstate.res.rp >= gstate.prices.auto1) {
-        gstate.res.rp -= gstate.prices.auto1;
-        document.getElementById("automation1").style.display = "none";
-        document.getElementById("belt").style.display = "inline";
-        gstate.res.belt = 1;
-        gstate.upgrades.auto1 = true;
-        state_update(gstate);
-    }
-}
-function sci_manag_buy() {
-    if (gstate.res.money >= gstate.prices.sci_manag) {
-        document.getElementById("scientific-manag").style.display = "none";
-        document.getElementById("op-res").style.display = "inline";
-        gstate.upgrades.sci_manag = true;
-        gstate.res.eff_bonus += 10;
-        gstate.res.marketer_base_bonus += 5;
+        var m = gstate.res.worker_max > 10 ? 3.0 : 2.0;
+        gstate.prices.worker_cap = Math.round(gstate.prices.worker_cap * m);
+        gstate.res.worker_max = Math.round(gstate.res.worker_max * 1.5);
         state_update(gstate);
     }
 }
