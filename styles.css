@@ -6,6 +6,27 @@
 	height: 95vh;
 }
 
+#res-prog {
+	width: 100px;
+	height: 20px;
+	border: 1px solid black;
+}
+
+#current-res {
+	display: none;
+}
+
+#res-bar {
+	width: 0%;
+	height: 20px;
+	background-color: red;
+	display: block !important;
+}
+
+#bar-text {
+	padding-right: 10px;
+}
+
 #worker-area { 
 	grid-column: 1 / 3;
 	grid-row: 2 / 5;
@@ -23,7 +44,9 @@
 }
 
 .centered-text {
-	text-align: center;
+	display: flex !important;
+	justify-content: center;
+	align-items: center;
 }
 
 .cbtn {

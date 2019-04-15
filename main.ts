@@ -18,6 +18,7 @@ interface Resources {
 	base_sell: number;
 	eff_bonus: number;
 	rp: number;
+	rp_goal: number;
 	base_mark_eff: number;
 	belt: number;
 	worker_max: number;
@@ -41,6 +42,7 @@ interface Prices {
 	op_res: number;
 	sci_manag: number;
 	auto1: number;
+	auto1_rp: number;
 	belt: number;
 	worker_cap: number;
 	storage_cap: number;
@@ -74,6 +76,10 @@ interface Upgrades {
 	auto_ad: Boolean,
 }
 
+interface Functions {
+	res_finish: Function;
+}
+
 interface GameState {
 	time_prev: number;
 	time: number;
@@ -82,7 +88,8 @@ interface GameState {
 	res: Resources;
 	prices: Prices;
 	upgrades: Upgrades;
-	stats: Stats
+	stats: Stats;
+	func: Functions;
 }
 
 const tick_time = 1000;
@@ -105,6 +112,7 @@ let gstate = {
 	res: {
 		money: 100000,
 		rp: 0,
+		rp_goal: 0,
 		unsk_w: 0,
 		manag: 0,
 		marketer: 0,
@@ -139,13 +147,14 @@ let gstate = {
 		marketing2: 8000,
 		op_res: 2000,
 		auto1: 500,
+		auto1_rp: 100,
 		belt: 5000,
 		worker_cap: 200,
 		storage_cap: 200,
-		comp_sys_rp: 1000,
+		comp_sys_rp: 500,
 		comp_sys: 10000,
 		bus_anal: 1000,
-		auto_ad_rp: 5000,
+		auto_ad_rp: 1000,
 		auto_ad: 20000,
 		robocallers: 10000,
 	},
@@ -160,6 +169,9 @@ let gstate = {
 		bus_anal: false,
 		auto_ad: false,
 	},
+	func: {
+	res_finish: null,
+	}
 }
 
 init_upgrade_draw(gstate);
@@ -169,9 +181,8 @@ update(gstate);
 
 function draw_resource_bar(state: GameState) {
 	let money_rate = "";
-	if (state.upgrades.bus_anal) {
+	if (state.upgrades.bus_anal)
 		money_rate = " ($" + (state.stats.money_avg).toFixed(2) + "/fr)";
-	}
 	document.getElementById("money-stat").innerHTML =
 		"Money: $" + Math.floor(state.res.money) + money_rate;
 	document.getElementById("worker-stat").innerHTML =
@@ -192,16 +203,12 @@ function draw_resource_bar(state: GameState) {
 		.toFixed(2) + "%";
 		document.getElementById("marketing").title = "Affects packages and orders received";
 	}
-	if (state.upgrades.op_res) {
-		document.getElementById("research-points").innerHTML =
-		"Research Points (RP): " + state.res.rp;
-		document.getElementById("research-points").title = "Used for research";
-	}
 	if (state.upgrades.auto1) {
 	document.getElementById("belt-text").innerHTML =
 		"Conveyer Belt System: Level " + state.res.belt + " [$" + state.prices.belt + "]";
 	}
 	if (state.upgrades.auto_ad) {
+	document.getElementById("robocaller").style.display = "inline";
 	document.getElementById("robocaller-text").innerHTML =
 		"Robocaller System: Level " + state.res.robocallers + " [$" + state.prices.robocallers + "]";
 	}
@@ -209,12 +216,6 @@ function draw_resource_bar(state: GameState) {
 		"Package Capacity: " + state.res.pack_max + " [$" + state.prices.storage_cap + "]";
 	document.getElementById("worker-cap-text").innerHTML =
 		"Worker Capacity: " + state.res.worker_max + " [$" + state.prices.worker_cap + "]";
-	if (!state.upgrades.comp_sys && state.upgrades.auto1) {
-		document.getElementById("computer-systems").style.display = "inline";
-	}
-	if (!state.upgrades.auto_ad && state.upgrades.comp_sys && state.upgrades.marketing2) {
-		document.getElementById("auto-ad").style.display = "inline";
-	}
 }
 
 function draw_worker_area(state: GameState) {
@@ -244,15 +245,13 @@ function init_upgrade_draw(state: GameState) {
 	document.getElementById("op-res-text").innerHTML =
 		"Operations Research [$" + state.prices.op_res + "]";
 	document.getElementById("automation1-text").innerHTML =
-		"Automation Research I [" + state.prices.auto1 + "RP]";
+		"Automation Research I [$" + state.prices.auto1 + "]";
 	document.getElementById("comp-sys-text").innerHTML =
-		"Computer Systems Research [$" + state.prices.comp_sys + ", "
-		+ state.prices.comp_sys_rp + "RP]";
+		"Computer Systems Research [$" + state.prices.comp_sys + "]";
 	document.getElementById("bus-anal-text").innerHTML =
 		"Business Analytics [$" + state.prices.bus_anal + "]";
 	document.getElementById("auto-ad-text").innerHTML =
-		"Automated Advertisement [$" + state.prices.auto_ad + ", "
-		+ state.prices.auto_ad_rp + "RP]";
+		"Automated Advertisement [$" + state.prices.auto_ad + "]";
 }
 
 function draw(state: GameState) {
@@ -267,10 +266,11 @@ function unhide(state: GameState) {
 	}
 }
 
+/* Game logic */
+
 function state_update(state: GameState) {
 	calculate_effeciency(state);
 	calculate_mark_eff(state);
-	calculate_research(state);
 	draw(state);
 	unhide(state);
 }
@@ -296,6 +296,7 @@ function tick(state: GameState) {
 	handle_packages(state);
 	calc_money_avg(state, before);
 	//console.log((state.stats));
+	calculate_research(state);
 	state_update(state);
 }
 
@@ -392,11 +393,6 @@ function calculate_mark_eff(state: GameState): void {
 	state.res.mark_eff = (state.res.robocallers * 10.0 + (base_eff + marketer_bonus) * 2.0) / 100.0;
 }
 
-function calculate_research(state: GameState) {
-	if (state.upgrades.op_res)
-		state.res.rp += state.res.researcher;
-}
-
 function buy_worker(state: GameState): Boolean {
 	const w = state.res.unsk_w + state.res.manag + state.res.marketer
 			+ state.res.researcher + 1;
@@ -412,6 +408,57 @@ function add_package(state: GameState, add: number): number {
 	if (res < 0)
 		res = 0;
 	return res;
+}
+
+function start_research(state: GameState, rp: number, name: string, func: Function): Boolean {
+	if (state.func.res_finish != null)
+		return false;
+	document.getElementById("current-res").style.display = "flex";
+	state.res.rp = 0;
+	state.res.rp_goal = rp;
+	state.func.res_finish = func;
+	let text = document.getElementById("bar-text");
+	text.innerHTML = name;
+	return true;
+}
+
+function cancel_research(state: GameState) {
+	if (state.func.res_finish == null)
+		return;
+	document.getElementById("res-bar").style.width = "0%";
+	document.getElementById("current-res").style.display = "none";
+	state.res.rp = 0;
+	state.res.rp_goal = 0;
+	state.func.res_finish = null;
+}
+
+function calc_res_mod(state: GameState) {
+	const dec_mod = 0.75;
+	let next_mod = 1;
+	let result = 0;
+	for (let i = 0; i < state.res.researcher; ++i) {
+		result += next_mod;
+		next_mod *= dec_mod;
+		if (next_mod < 0.1)
+			next_mod = 0.1;
+	}
+	return result;
+}
+
+function calculate_research(state: GameState) {
+	if (state.func.res_finish == null)
+		return;
+	state.res.rp += calc_res_mod(state);
+	if (state.res.rp >= state.res.rp_goal) {
+		state.func.res_finish(state);
+		cancel_research(state);
+	} else {
+		let bar = document.getElementById("res-bar");
+		let val = 0;
+		if (state.res.rp_goal != 0)
+			val = Math.floor(state.res.rp * 100 / state.res.rp_goal);
+		bar.style.width = val + "%";
+	}
 }
 
 /* onclick functions */
@@ -455,37 +502,50 @@ function marketing_2() {
 	}
 }
 
+function automation1_res_finish(state: GameState) {
+	document.getElementById("belt").style.display = "inline";
+	state.res.belt = 1;
+	state.upgrades.auto1 = true;
+	state.res.eff_bonus += 10;
+	document.getElementById("computer-systems").style.display = "inline";
+	state_update(state);
+}
+
 function automation1_res() {
-	if (gstate.res.rp >= gstate.prices.auto1) {
-		gstate.res.rp -= gstate.prices.auto1;
+	if (gstate.res.money >= gstate.prices.auto1 &&
+			start_research(gstate, gstate.prices.auto1_rp, "Automation Research I", automation1_res_finish)
+	   ) {
 		document.getElementById("automation1").style.display = "none";
-		document.getElementById("belt").style.display = "inline";
-		gstate.res.belt = 1;
-		gstate.upgrades.auto1 = true;
-		gstate.res.eff_bonus += 10;
-		state_update(gstate);
+		gstate.res.money -= gstate.prices.auto1;
 	}
+}
+
+function comp_sys_res_finish(state: GameState) {
+	state.upgrades.comp_sys = true;
+	document.getElementById("auto-ad").style.display = "inline";
+	state_update(state);
 }
 
 function comp_sys_res() {
-	if (gstate.res.rp >= gstate.prices.comp_sys_rp &&
-		gstate.res.money >= gstate.prices.comp_sys) {
-		gstate.res.rp -= gstate.prices.comp_sys_rp;
+	if (gstate.res.money >= gstate.prices.comp_sys &&
+		start_research(gstate, gstate.prices.comp_sys_rp, "Computer Systems", comp_sys_res_finish)
+	   ) {
 		gstate.res.money -= gstate.prices.comp_sys;
 		document.getElementById("computer-systems").style.display = "none";
-		gstate.upgrades.comp_sys = true;
-		state_update(gstate);
 	}
 }
 
+function auto_ad_res_finish(state: GameState) {
+	state.upgrades.auto_ad = true;
+	state_update(state);
+}
+
 function auto_ad_res() {
-	if (gstate.res.rp >= gstate.prices.auto_ad_rp &&
-		gstate.res.money >= gstate.prices.auto_ad) {
-		gstate.res.rp -= gstate.prices.auto_ad_rp;
+	if (gstate.res.money >= gstate.prices.auto_ad &&
+		start_research(gstate, gstate.prices.comp_sys_rp, "Automated Advertisement", auto_ad_res_finish)
+	   ) {
 		gstate.res.money -= gstate.prices.auto_ad;
 		document.getElementById("auto-ad").style.display = "none";
-		gstate.upgrades.auto_ad = true;
-		state_update(gstate);
 	}
 }
 
