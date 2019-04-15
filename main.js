@@ -57,7 +57,8 @@ var gstate = {
         belt: 5000,
         worker_cap: 200,
         storage_cap: 200,
-        wh_op: 5000,
+        wh_op: 500,
+        wh_op_rp: 200,
         comp_sys_rp: 500,
         comp_sys: 10000,
         bus_anal: 1000,
@@ -155,6 +156,8 @@ function init_upgrade_draw(state) {
         "Business Analytics [$" + state.prices.bus_anal + "]";
     document.getElementById("auto-ad-text").innerHTML =
         "Automated Advertisement [$" + state.prices.auto_ad + "]";
+    document.getElementById("wh-op-text").innerHTML =
+        "Warehouse Operations [$" + state.prices.wh_op + "]";
 }
 function draw(state) {
     draw_resource_bar(state);
@@ -296,8 +299,6 @@ function add_package(state, add) {
     return res;
 }
 function start_research(state, rp, name, func, cid) {
-    if (state.func.res_finish != null)
-        return false;
     var research = { finish: func, rp: 0, rp_goal: rp, id: cid };
     state.res.current_research.push(research);
     var element = document.getElementById(cid);
@@ -415,6 +416,28 @@ function auto_ad_res() {
         gstate.res.money -= gstate.prices.auto_ad;
     }
 }
+function op_res_buy() {
+    if (gstate.res.money >= gstate.prices.op_res) {
+        gstate.res.money -= gstate.prices.op_res;
+        document.getElementById("automation1").style.display = "inline";
+        document.getElementById("warehouse-op").style.display = "inline";
+        document.getElementById("researcher-tab").style.display = "inline";
+        document.getElementById("op-res").style.display = "none";
+        gstate.upgrades.op_res = true;
+        state_update(gstate);
+    }
+}
+function wh_op_finish(state) {
+    state.upgrades.wh_op = true;
+    document.getElementById("warehouse-op").style.display = "none";
+    state_update(state);
+}
+function wh_op_res() {
+    if (gstate.res.money >= gstate.prices.wh_op &&
+        start_research(gstate, gstate.prices.wh_op_rp, null, wh_op_finish, "warehouse-op")) {
+        gstate.res.money -= gstate.prices.wh_op;
+    }
+}
 function bus_anal_buy() {
     if (gstate.res.money >= gstate.prices.bus_anal) {
         gstate.res.money -= gstate.prices.bus_anal;
@@ -482,16 +505,6 @@ function res_hire() {
 function res_fire() {
     if (gstate.res.researcher > 0) {
         gstate.res.researcher -= 1;
-        state_update(gstate);
-    }
-}
-function op_res_buy() {
-    if (gstate.res.money >= gstate.prices.op_res) {
-        gstate.res.money -= gstate.prices.op_res;
-        document.getElementById("automation1").style.display = "inline";
-        document.getElementById("researcher-tab").style.display = "inline";
-        document.getElementById("op-res").style.display = "none";
-        gstate.upgrades.op_res = true;
         state_update(gstate);
     }
 }
