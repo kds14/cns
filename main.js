@@ -39,7 +39,8 @@ var gstate = {
         worker_max: 10,
         pack_max: 200,
         belt: 0,
-        robocallers: 0
+        robocallers: 0,
+        current_research: []
     },
     prices: {
         unsk_w: 9,
@@ -56,6 +57,7 @@ var gstate = {
         belt: 5000,
         worker_cap: 200,
         storage_cap: 200,
+        wh_op: 5000,
         comp_sys_rp: 500,
         comp_sys: 10000,
         bus_anal: 1000,
@@ -72,7 +74,8 @@ var gstate = {
         auto1: false,
         comp_sys: false,
         bus_anal: false,
-        auto_ad: false
+        auto_ad: false,
+        wh_op: false
     },
     func: {
         res_finish: null
@@ -189,7 +192,6 @@ function tick(state) {
     var before = state.res.money;
     handle_packages(state);
     calc_money_avg(state, before);
-    //console.log((state.stats));
     calculate_research(state);
     state_update(state);
 }
@@ -293,25 +295,18 @@ function add_package(state, add) {
         res = 0;
     return res;
 }
-function start_research(state, rp, name, func) {
+function start_research(state, rp, name, func, cid) {
     if (state.func.res_finish != null)
         return false;
-    document.getElementById("current-res").style.display = "flex";
-    state.res.rp = 0;
-    state.res.rp_goal = rp;
-    state.func.res_finish = func;
-    var text = document.getElementById("bar-text");
-    text.innerHTML = name;
+    var research = { finish: func, rp: 0, rp_goal: rp, id: cid };
+    state.res.current_research.push(research);
+    var element = document.getElementById(cid);
+    var ele = element.getElementsByClassName("current-res")[0];
+    ele.style.display = "flex";
+    var ele2 = element.getElementsByTagName("Button")[0];
+    ele2.style.display = "none";
+    element.style.display = "flex";
     return true;
-}
-function cancel_research(state) {
-    if (state.func.res_finish == null)
-        return;
-    document.getElementById("res-bar").style.width = "0%";
-    document.getElementById("current-res").style.display = "none";
-    state.res.rp = 0;
-    state.res.rp_goal = 0;
-    state.func.res_finish = null;
 }
 function calc_res_mod(state) {
     var dec_mod = 0.75;
@@ -326,19 +321,24 @@ function calc_res_mod(state) {
     return result;
 }
 function calculate_research(state) {
-    if (state.func.res_finish == null)
-        return;
-    state.res.rp += calc_res_mod(state);
-    if (state.res.rp >= state.res.rp_goal) {
-        state.func.res_finish(state);
-        cancel_research(state);
-    }
-    else {
-        var bar = document.getElementById("res-bar");
-        var val = 0;
-        if (state.res.rp_goal != 0)
-            val = Math.floor(state.res.rp * 100 / state.res.rp_goal);
-        bar.style.width = val + "%";
+    for (var i = 0; i < state.res.current_research.length; ++i) {
+        var research = state.res.current_research[i];
+        research.rp += calc_res_mod(state);
+        if (research.rp >= research.rp_goal) {
+            research.finish(state);
+            state.res.current_research.splice(i, 1);
+            i -= 1;
+            continue;
+        }
+        else {
+            var ele = document.getElementById(research.id);
+            var bar = ele.getElementsByClassName("res-bar")[0];
+            var val = 0;
+            if (research.rp_goal != 0)
+                val = Math.floor(research.rp * 100 / research.rp_goal);
+            bar.style.width = val + "%";
+        }
+        state.res.current_research[i] = research;
     }
 }
 /* onclick functions */
@@ -382,37 +382,37 @@ function automation1_res_finish(state) {
     state.res.belt = 1;
     state.upgrades.auto1 = true;
     state.res.eff_bonus += 10;
+    document.getElementById("automation1").style.display = "none";
     document.getElementById("computer-systems").style.display = "inline";
     state_update(state);
 }
 function automation1_res() {
     if (gstate.res.money >= gstate.prices.auto1 &&
-        start_research(gstate, gstate.prices.auto1_rp, "Automation Research I", automation1_res_finish)) {
-        document.getElementById("automation1").style.display = "none";
+        start_research(gstate, gstate.prices.auto1_rp, "Automation Research I", automation1_res_finish, "automation1")) {
         gstate.res.money -= gstate.prices.auto1;
     }
 }
 function comp_sys_res_finish(state) {
     state.upgrades.comp_sys = true;
     document.getElementById("auto-ad").style.display = "inline";
+    document.getElementById("computer-systems").style.display = "none";
     state_update(state);
 }
 function comp_sys_res() {
     if (gstate.res.money >= gstate.prices.comp_sys &&
-        start_research(gstate, gstate.prices.comp_sys_rp, "Computer Systems", comp_sys_res_finish)) {
+        start_research(gstate, gstate.prices.comp_sys_rp, "Computer Systems", comp_sys_res_finish, "computer-systems")) {
         gstate.res.money -= gstate.prices.comp_sys;
-        document.getElementById("computer-systems").style.display = "none";
     }
 }
 function auto_ad_res_finish(state) {
     state.upgrades.auto_ad = true;
+    document.getElementById("auto-ad").style.display = "none";
     state_update(state);
 }
 function auto_ad_res() {
     if (gstate.res.money >= gstate.prices.auto_ad &&
-        start_research(gstate, gstate.prices.comp_sys_rp, "Automated Advertisement", auto_ad_res_finish)) {
+        start_research(gstate, gstate.prices.comp_sys_rp, "Automated Advertisement", auto_ad_res_finish, "auto-ad")) {
         gstate.res.money -= gstate.prices.auto_ad;
-        document.getElementById("auto-ad").style.display = "none";
     }
 }
 function bus_anal_buy() {

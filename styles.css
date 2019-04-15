@@ -6,24 +6,24 @@
 	height: 95vh;
 }
 
-#res-prog {
+.res-prog {
 	width: 100px;
 	height: 20px;
 	border: 1px solid black;
 }
 
-#current-res {
+.current-res {
 	display: none;
 }
 
-#res-bar {
+.res-bar {
 	width: 0%;
 	height: 20px;
 	background-color: red;
 	display: block !important;
 }
 
-#bar-text {
+.bar-text {
 	padding-right: 10px;
 }
 

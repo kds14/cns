@@ -24,6 +24,7 @@ interface Resources {
 	worker_max: number;
 	pack_max: number;
 	robocallers: number;
+	current_research: Array<Research>;
 }
 
 interface Stats {
@@ -52,6 +53,7 @@ interface Prices {
 	auto_ad: number;
 	auto_ad_rp: number;
 	robocallers: number;
+	wh_op: number;
 }
 
 interface Timer {
@@ -71,6 +73,7 @@ interface Upgrades {
 	sci_manag: Boolean,
 	op_res: Boolean,
 	auto1: Boolean,
+	wh_op: Boolean,
 	comp_sys: Boolean,
 	bus_anal: Boolean,
 	auto_ad: Boolean,
@@ -78,6 +81,13 @@ interface Upgrades {
 
 interface Functions {
 	res_finish: Function;
+}
+
+interface Research {
+	finish: Function,
+	rp: number,
+	rp_goal: number,
+	id: string,
 }
 
 interface GameState {
@@ -135,6 +145,7 @@ let gstate = {
 		pack_max: 200,
 		belt: 0,
 		robocallers: 0,
+		current_research: [],
 	},
 	prices: {
 		unsk_w: 9,
@@ -151,6 +162,7 @@ let gstate = {
 		belt: 5000,
 		worker_cap: 200,
 		storage_cap: 200,
+		wh_op: 5000,
 		comp_sys_rp: 500,
 		comp_sys: 10000,
 		bus_anal: 1000,
@@ -168,6 +180,7 @@ let gstate = {
 		comp_sys: false,
 		bus_anal: false,
 		auto_ad: false,
+		wh_op: false,
 	},
 	func: {
 	res_finish: null,
@@ -295,7 +308,6 @@ function tick(state: GameState) {
 	const before = state.res.money;
 	handle_packages(state);
 	calc_money_avg(state, before);
-	//console.log((state.stats));
 	calculate_research(state);
 	state_update(state);
 }
@@ -410,26 +422,18 @@ function add_package(state: GameState, add: number): number {
 	return res;
 }
 
-function start_research(state: GameState, rp: number, name: string, func: Function): Boolean {
+function start_research(state: GameState, rp: number, name: string, func: Function, cid): Boolean {
 	if (state.func.res_finish != null)
 		return false;
-	document.getElementById("current-res").style.display = "flex";
-	state.res.rp = 0;
-	state.res.rp_goal = rp;
-	state.func.res_finish = func;
-	let text = document.getElementById("bar-text");
-	text.innerHTML = name;
+	let research = {finish:func, rp:0, rp_goal:rp, id:cid}
+	state.res.current_research.push(research);
+	let element = document.getElementById(cid);
+	let ele = element.getElementsByClassName("current-res")[0] as HTMLElement;
+	ele.style.display = "flex";
+	let ele2 = element.getElementsByTagName("Button")[0] as HTMLElement;
+	ele2.style.display = "none";
+	element.style.display = "flex";
 	return true;
-}
-
-function cancel_research(state: GameState) {
-	if (state.func.res_finish == null)
-		return;
-	document.getElementById("res-bar").style.width = "0%";
-	document.getElementById("current-res").style.display = "none";
-	state.res.rp = 0;
-	state.res.rp_goal = 0;
-	state.func.res_finish = null;
 }
 
 function calc_res_mod(state: GameState) {
@@ -446,18 +450,23 @@ function calc_res_mod(state: GameState) {
 }
 
 function calculate_research(state: GameState) {
-	if (state.func.res_finish == null)
-		return;
-	state.res.rp += calc_res_mod(state);
-	if (state.res.rp >= state.res.rp_goal) {
-		state.func.res_finish(state);
-		cancel_research(state);
-	} else {
-		let bar = document.getElementById("res-bar");
-		let val = 0;
-		if (state.res.rp_goal != 0)
-			val = Math.floor(state.res.rp * 100 / state.res.rp_goal);
-		bar.style.width = val + "%";
+	for (let i = 0; i < state.res.current_research.length; ++i) {
+		let research = state.res.current_research[i];
+		research.rp += calc_res_mod(state);
+		if (research.rp >= research.rp_goal) {
+			research.finish(state);
+			state.res.current_research.splice(i,1);
+			i -= 1;
+			continue;
+		} else {
+			let ele = document.getElementById(research.id);
+			let bar = ele.getElementsByClassName("res-bar")[0] as HTMLElement;
+			let val = 0;
+			if (research.rp_goal != 0)
+				val = Math.floor(research.rp * 100 / research.rp_goal);
+			bar.style.width = val + "%";
+		}
+		state.res.current_research[i] = research;
 	}
 }
 
@@ -507,15 +516,15 @@ function automation1_res_finish(state: GameState) {
 	state.res.belt = 1;
 	state.upgrades.auto1 = true;
 	state.res.eff_bonus += 10;
+	document.getElementById("automation1").style.display = "none";
 	document.getElementById("computer-systems").style.display = "inline";
 	state_update(state);
 }
 
 function automation1_res() {
 	if (gstate.res.money >= gstate.prices.auto1 &&
-			start_research(gstate, gstate.prices.auto1_rp, "Automation Research I", automation1_res_finish)
+			start_research(gstate, gstate.prices.auto1_rp, "Automation Research I", automation1_res_finish, "automation1")
 	   ) {
-		document.getElementById("automation1").style.display = "none";
 		gstate.res.money -= gstate.prices.auto1;
 	}
 }
@@ -523,29 +532,29 @@ function automation1_res() {
 function comp_sys_res_finish(state: GameState) {
 	state.upgrades.comp_sys = true;
 	document.getElementById("auto-ad").style.display = "inline";
+	document.getElementById("computer-systems").style.display = "none";
 	state_update(state);
 }
 
 function comp_sys_res() {
 	if (gstate.res.money >= gstate.prices.comp_sys &&
-		start_research(gstate, gstate.prices.comp_sys_rp, "Computer Systems", comp_sys_res_finish)
+			start_research(gstate, gstate.prices.comp_sys_rp, "Computer Systems", comp_sys_res_finish, "computer-systems")
 	   ) {
 		gstate.res.money -= gstate.prices.comp_sys;
-		document.getElementById("computer-systems").style.display = "none";
 	}
 }
 
 function auto_ad_res_finish(state: GameState) {
 	state.upgrades.auto_ad = true;
+	document.getElementById("auto-ad").style.display = "none";
 	state_update(state);
 }
 
 function auto_ad_res() {
 	if (gstate.res.money >= gstate.prices.auto_ad &&
-		start_research(gstate, gstate.prices.comp_sys_rp, "Automated Advertisement", auto_ad_res_finish)
+			start_research(gstate, gstate.prices.comp_sys_rp, "Automated Advertisement", auto_ad_res_finish, "auto-ad")
 	   ) {
 		gstate.res.money -= gstate.prices.auto_ad;
-		document.getElementById("auto-ad").style.display = "none";
 	}
 }
 
