@@ -49,8 +49,7 @@ var gstate = {
         sci_manag: 500,
         basic1: 100,
         marketer: 20,
-        marketing1: 200,
-        marketing2: 8000,
+        marketing: [200, 1000, 5000, 8000],
         op_res: 2000,
         auto1: 500,
         auto1_rp: 100,
@@ -68,8 +67,7 @@ var gstate = {
     },
     upgrades: {
         basic1: false,
-        marketing1: false,
-        marketing2: false,
+        marketing: 0,
         op_res: false,
         sci_manag: false,
         auto1: false,
@@ -80,6 +78,9 @@ var gstate = {
     },
     func: {
         res_finish: null
+    },
+    other: {
+        marketing_bonus: [1, 1, 2, 10]
     }
 };
 init_upgrade_draw(gstate);
@@ -103,7 +104,7 @@ function draw_resource_bar(state) {
         "Stored Packages: " + Math.floor(state.res.pack_stored);
     document.getElementById("pack-shipped").innerHTML =
         "Shipped Packages: " + Math.floor(state.res.pack_shipped_full);
-    if (state.upgrades.marketing1) {
+    if (state.upgrades.marketing > 0) {
         document.getElementById("marketing").innerHTML =
             "Marketing Effeciency: " + (state.res.mark_eff * 100)
                 .toFixed(2) + "%";
@@ -128,7 +129,7 @@ function draw_worker_area(state) {
         "Unskilled Workers: " + state.res.unsk_w;
     document.getElementById("manager-text").innerHTML =
         "Managers: " + state.res.manag;
-    if (state.upgrades.marketing1) {
+    if (state.upgrades.marketing > 0) {
         document.getElementById("marketer-text").innerHTML =
             "Marketers: " + state.res.marketer;
     }
@@ -137,13 +138,14 @@ function draw_worker_area(state) {
             "Researchers: " + state.res.researcher;
     }
 }
+function draw_inc(state) {
+    document.getElementById("mark-1-text").innerHTML =
+        "Marketing " + (state.upgrades.marketing + 1) + " [$" + state.prices.marketing[state.upgrades.marketing] + "]";
+}
 function init_upgrade_draw(state) {
     document.getElementById("basic-res-1-text").innerHTML =
         "Basic Business Textbook [$" + state.prices.basic1 + "]";
-    document.getElementById("mark-1-text").innerHTML =
-        "Marketing I [$" + state.prices.marketing1 + "]";
-    document.getElementById("mark-2-text").innerHTML =
-        "Marketing II [$" + state.prices.marketing2 + "]";
+    draw_inc(state);
     document.getElementById("sci-manag-text").innerHTML =
         "Scientific Management [$" + state.prices.sci_manag + "]";
     document.getElementById("op-res-text").innerHTML =
@@ -249,7 +251,7 @@ function ship_packages(state) {
     }
 }
 function calculate_orders(state) {
-    var eff = state.res.base_ord * state.res.mark_eff * 1.0 + state.res.base_ord + state.res.base_ord * Math.random() / 2.0;
+    var eff = state.res.base_ord * state.res.mark_eff * 0.5 + state.res.base_ord * 0.5 + Math.random() / 2.0;
     state.res.orders += eff;
     if (state.res.orders > state.res.pack_max)
         state.res.orders = state.res.pack_max;
@@ -356,28 +358,35 @@ function basic_research_1() {
     }
 }
 function marketing_1() {
-    if (gstate.res.money >= gstate.prices.marketing1) {
+    if (gstate.upgrades.marketing >= gstate.prices.marketing.length)
+        return;
+    var lvl = gstate.upgrades.marketing;
+    var price = gstate.prices.marketing[lvl];
+    if (gstate.res.money >= price) {
         document.getElementById("marketing").style.display = "inline";
-        document.getElementById("marketing1").style.display = "none";
-        gstate.upgrades.marketing1 = true;
-        document.getElementById("marketer-tab").style.display = "inline";
-        document.getElementById("marketing2").style.display = "inline";
-        gstate.res.marketer_base_bonus = 10;
-        gstate.res.money -= gstate.prices.marketing1;
-        gstate.res.base_ord += 5;
+        gstate.upgrades.marketing += 1;
+        gstate.res.marketer_base_bonus += 5;
+        gstate.res.money -= price;
+        gstate.res.base_ord += gstate.other.marketing_bonus[lvl];
+        gstate.res.base_rec += gstate.other.marketing_bonus[lvl];
+        if (gstate.upgrades.marketing >= gstate.prices.marketing.length)
+            document.getElementById("marketing1").style.display = "none";
+        draw_inc(gstate);
         state_update(gstate);
     }
 }
+/*
 function marketing_2() {
     if (gstate.res.money >= gstate.prices.marketing2) {
         document.getElementById("marketing2").style.display = "none";
         gstate.upgrades.marketing2 = true;
         gstate.res.base_mark_eff += 20;
         gstate.res.money -= gstate.prices.marketing2;
-        gstate.res.base_ord += 20;
+        gstate.res.base_ord += 10;
+        gstate.res.base_rec += 10;
         state_update(gstate);
     }
-}
+}*/
 function automation1_res_finish(state) {
     document.getElementById("belt").style.display = "inline";
     state.res.belt = 1;

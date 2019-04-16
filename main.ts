@@ -38,8 +38,7 @@ interface Prices {
 	marketer: number;
 	researcher: number;
 	basic1: number;
-	marketing1: number;
-	marketing2: number;
+	marketing: Array<number>;
 	op_res: number;
 	sci_manag: number;
 	auto1: number;
@@ -68,8 +67,7 @@ interface Timers {
 
 interface Upgrades {
 	basic1: Boolean,
-	marketing1: Boolean,
-	marketing2: Boolean,
+	marketing: number,
 	sci_manag: Boolean,
 	op_res: Boolean,
 	auto1: Boolean,
@@ -86,6 +84,10 @@ interface Research {
 	id: string,
 }
 
+interface Other {
+	marketing_bonus: Array<number>;
+}
+
 interface GameState {
 	time_prev: number;
 	time: number;
@@ -95,6 +97,7 @@ interface GameState {
 	prices: Prices;
 	upgrades: Upgrades;
 	stats: Stats;
+	other: Other;
 }
 
 const tick_time = 1000;
@@ -149,8 +152,7 @@ let gstate = {
 		sci_manag: 500,
 		basic1: 100,
 		marketer: 20,
-		marketing1: 200,
-		marketing2: 8000,
+		marketing: [200,1000,5000,8000],
 		op_res: 2000,
 		auto1: 500,
 		auto1_rp: 100,
@@ -168,8 +170,7 @@ let gstate = {
 	},
 	upgrades: {
 		basic1: false,
-		marketing1: false,
-		marketing2: false,
+		marketing: 0,
 		op_res: false,
 		sci_manag: false,
 		auto1: false,
@@ -180,7 +181,10 @@ let gstate = {
 	},
 	func: {
 	res_finish: null,
-	}
+	},
+	other: {
+	marketing_bonus: [1,1,2,10]
+   },
 }
 
 init_upgrade_draw(gstate);
@@ -206,20 +210,20 @@ function draw_resource_bar(state: GameState) {
 		"Stored Packages: " + Math.floor(state.res.pack_stored);
 	document.getElementById("pack-shipped").innerHTML =
 		"Shipped Packages: " + Math.floor(state.res.pack_shipped_full);
-	if (state.upgrades.marketing1) {
+	if (state.upgrades.marketing > 0) {
 		document.getElementById("marketing").innerHTML =
-		"Marketing Effeciency: " + (state.res.mark_eff * 100)
-		.toFixed(2) + "%";
+			"Marketing Effeciency: " + (state.res.mark_eff * 100)
+			.toFixed(2) + "%";
 		document.getElementById("marketing").title = "Affects packages and orders received";
 	}
 	if (state.upgrades.auto1) {
-	document.getElementById("belt-text").innerHTML =
-		"Conveyer Belt System: Level " + state.res.belt + " [$" + state.prices.belt + "]";
+		document.getElementById("belt-text").innerHTML =
+			"Conveyer Belt System: Level " + state.res.belt + " [$" + state.prices.belt + "]";
 	}
 	if (state.upgrades.auto_ad) {
-	document.getElementById("robocaller").style.display = "inline";
-	document.getElementById("robocaller-text").innerHTML =
-		"Robocaller System: Level " + state.res.robocallers + " [$" + state.prices.robocallers + "]";
+		document.getElementById("robocaller").style.display = "inline";
+		document.getElementById("robocaller-text").innerHTML =
+			"Robocaller System: Level " + state.res.robocallers + " [$" + state.prices.robocallers + "]";
 	}
 	document.getElementById("storage-cap-text").innerHTML =
 		"Package Capacity: " + state.res.pack_max + " [$" + state.prices.storage_cap + "]";
@@ -232,7 +236,7 @@ function draw_worker_area(state: GameState) {
 		"Unskilled Workers: " + state.res.unsk_w;
 	document.getElementById("manager-text").innerHTML =
 		"Managers: " + state.res.manag;
-	if (state.upgrades.marketing1) {
+	if (state.upgrades.marketing > 0) {
 		document.getElementById("marketer-text").innerHTML =
 			"Marketers: " + state.res.marketer;
 	}
@@ -242,13 +246,15 @@ function draw_worker_area(state: GameState) {
 	}
 }
 
+function draw_inc(state: GameState) {
+	document.getElementById("mark-1-text").innerHTML =
+		"Marketing " + (state.upgrades.marketing + 1) + " [$" + state.prices.marketing[state.upgrades.marketing] + "]";
+}
+
 function init_upgrade_draw(state: GameState) {
 	document.getElementById("basic-res-1-text").innerHTML =
 		"Basic Business Textbook [$" + state.prices.basic1 + "]";
-	document.getElementById("mark-1-text").innerHTML =
-		"Marketing I [$" + state.prices.marketing1 + "]";
-	document.getElementById("mark-2-text").innerHTML =
-		"Marketing II [$" + state.prices.marketing2 + "]";
+	draw_inc(state);
 	document.getElementById("sci-manag-text").innerHTML =
 		"Scientific Management [$" + state.prices.sci_manag + "]";
 	document.getElementById("op-res-text").innerHTML =
@@ -348,8 +354,8 @@ function ship_packages(state: GameState) {
 		return;
 	let eff = state.res.labor * 0.25 * (1 + state.res.belt) * state.res.efficiency;
 	const min = Math.min(state.res.orders, state.res.pack_stored)
-	if (eff > min)
-		eff = min;
+		if (eff > min)
+			eff = min;
 	if (eff > 0) {
 		state.res.orders -= eff;
 		state.res.pack_stored -= eff;
@@ -365,7 +371,7 @@ function ship_packages(state: GameState) {
 }
 
 function calculate_orders(state: GameState) {
-	const eff = state.res.base_ord * state.res.mark_eff * 1.0 + state.res.base_ord + state.res.base_ord * Math.random() / 2.0;
+	const eff = state.res.base_ord * state.res.mark_eff * 0.5 + state.res.base_ord * 0.5 + Math.random() / 2.0;
 	state.res.orders += eff;
 	if (state.res.orders > state.res.pack_max)
 		state.res.orders = state.res.pack_max
@@ -405,7 +411,7 @@ function calculate_mark_eff(state: GameState): void {
 
 function buy_worker(state: GameState): Boolean {
 	const w = state.res.unsk_w + state.res.manag + state.res.marketer
-			+ state.res.researcher + 1;
+		+ state.res.researcher + 1;
 	return w <= state.res.worker_max;
 }
 
@@ -483,29 +489,35 @@ function basic_research_1() {
 }
 
 function marketing_1() {
-	if (gstate.res.money >= gstate.prices.marketing1) {
+	if (gstate.upgrades.marketing >= gstate.prices.marketing.length)
+		return;
+	const lvl = gstate.upgrades.marketing;
+	const price = gstate.prices.marketing[lvl];
+	if (gstate.res.money >= price) {
 		document.getElementById("marketing").style.display = "inline";
-		document.getElementById("marketing1").style.display = "none";
-		gstate.upgrades.marketing1 = true;
-		document.getElementById("marketer-tab").style.display = "inline";
-		document.getElementById("marketing2").style.display = "inline";
-		gstate.res.marketer_base_bonus = 10;
-		gstate.res.money -= gstate.prices.marketing1;
-		gstate.res.base_ord += 5;
+		gstate.upgrades.marketing += 1;
+		gstate.res.marketer_base_bonus += 5;
+		gstate.res.money -= price;
+		gstate.res.base_ord += gstate.other.marketing_bonus[lvl];
+		gstate.res.base_rec += gstate.other.marketing_bonus[lvl];
+		if (gstate.upgrades.marketing >= gstate.prices.marketing.length)
+			document.getElementById("marketing1").style.display = "none";
+		draw_inc(gstate);
 		state_update(gstate);
 	}
 }
-
+/*
 function marketing_2() {
 	if (gstate.res.money >= gstate.prices.marketing2) {
 		document.getElementById("marketing2").style.display = "none";
 		gstate.upgrades.marketing2 = true;
 		gstate.res.base_mark_eff += 20;
 		gstate.res.money -= gstate.prices.marketing2;
-		gstate.res.base_ord += 20;
+		gstate.res.base_ord += 10;
+		gstate.res.base_rec += 10;
 		state_update(gstate);
 	}
-}
+}*/
 
 function automation1_res_finish(state: GameState) {
 	document.getElementById("belt").style.display = "inline";
