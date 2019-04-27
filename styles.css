@@ -10,6 +10,7 @@
 	width: 100px;
 	height: 20px;
 	border: 1px solid black;
+	background-color: gray;
 }
 
 .current-res {

@@ -314,7 +314,7 @@ function start_research(state, rp, name, func, cid) {
 function calc_res_mod(state) {
     var dec_mod = 0.75;
     var next_mod = 1;
-    var result = 0;
+    var result = 1;
     for (var i = 0; i < state.res.researcher; ++i) {
         result += next_mod;
         next_mod *= dec_mod;

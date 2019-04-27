@@ -441,7 +441,7 @@ function start_research(state: GameState, rp: number, name: string, func: Functi
 function calc_res_mod(state: GameState) {
 	const dec_mod = 0.75;
 	let next_mod = 1;
-	let result = 0;
+	let result = 1;
 	for (let i = 0; i < state.res.researcher; ++i) {
 		result += next_mod;
 		next_mod *= dec_mod;
