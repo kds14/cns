@@ -152,7 +152,7 @@ let gstate = {
 		sci_manag: 500,
 		basic1: 100,
 		marketer: 20,
-		marketing: [200,1000,5000,8000],
+		marketing: [200,1000,5000,10000,20000,100000,1000000],
 		op_res: 2000,
 		auto1: 500,
 		auto1_rp: 100,
@@ -183,7 +183,7 @@ let gstate = {
 	res_finish: null,
 	},
 	other: {
-	marketing_bonus: [1,1,2,10]
+	marketing_bonus: [1,1,2,10,10,20,100]
    },
 }
 
