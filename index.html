@@ -21,6 +21,24 @@
 		<div></div>
 		<div id="research-points"></div>
 	</div>
+	<div id="decision-bar">
+		<div class="centered-text">Decisions</div>
+		<div style="display:none" id="stor-pol">
+			Storage Policy
+			<select id="stor-pol-sel" class="cbtn" onchange="stor_pol_sel_change()">
+			  <option value="pop">Popularity</option>
+			  <option id="inv-sel" style="display:none" value="inv">Maximum Inventory</option>
+			  <option id="coi-sel" style="display:none" value="coi">Cube per Order Index</option>
+			</select>
+		</div>
+	<div style="display:none" id="sort-pol">
+				Sorting Policy
+				<select id="sort-pol-sel" class="cbtn" onchange="sort_pol_sel_change()">
+				  <option value="after">sort-after-pick</option>
+				  <option id="while-sel" style="display:none" value="while">sort-while-pick</option>
+				</select>
+			</div>
+		</div>
 	<div id="worker-area">
 		<div class="centered-text">Employees</div>
 		<div id="unskilled-tab" title="Store and ship packages">
@@ -102,6 +120,41 @@
 			<div id="bus-anal-text"></div>
 			<button class="cbtn" onclick="bus_anal_buy()">Buy</button>
 		</div>
+		<div id="pop-pol" style="display:none" title="Unlocks popularity storage policy">
+			<div id="pop-pol-text"></div>
+			<button class="cbtn" onclick="pop_pol_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
+		<div id="inv-pol" style="display:none" title="Unlocks maximum inventory storage policy">
+			<div id="inv-pol-text"></div>
+			<button class="cbtn" onclick="inv_pol_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
+		<div id="coi-pol" style="display:none" title="Unlocks cube per order index storage policy">
+			<div id="coi-pol-text"></div>
+			<button class="cbtn" onclick="coi_pol_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
+		<div id="after-pol" style="display:none" title="Unlocks sort-after-pick sorting policy">
+			<div id="after-pol-text"></div>
+			<button class="cbtn" onclick="after_pol_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
+		<div id="while-pol" style="display:none" title="Unlocks sort-while-pick sorting policy">
+			<div id="while-pol-text"></div>
+			<button class="cbtn" onclick="while_pol_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
 		<div id="warehouse-op" style="display:none" title="Unlocks warehouse operations research">
 			<div id="wh-op-text"></div>
 			<button class="cbtn" onclick="wh_op_res()">Research</button>
@@ -109,6 +162,14 @@
 		<div class="res-prog"><div class="res-bar"></div> </div>
 		</div>
 		</div>
+<div id="imp-warehouse-op" style="display:none" title="Unlocks warehouse additional operations research">
+			<div id="imp-wh-op-text"></div>
+			<button class="cbtn" onclick="imp_wh_op_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
+
 		<div id="computer-systems" style="display:none" title="Unlocks new computer system research">
 			<div id="comp-sys-text"></div>
 			<button class="cbtn" onclick="comp_sys_res()">Research</button>

@@ -40,7 +40,9 @@ var gstate = {
         pack_max: 200,
         belt: 0,
         robocallers: 0,
-        current_research: []
+        current_research: [],
+        slap_option: -1,
+        sort_option: -1
     },
     prices: {
         unsk_w: 9,
@@ -57,13 +59,25 @@ var gstate = {
         worker_cap: 200,
         storage_cap: 200,
         wh_op: 500,
+        imp_wh_op: 50000,
         wh_op_rp: 200,
+        imp_wh_op_rp: 1000,
         comp_sys_rp: 500,
         comp_sys: 10000,
         bus_anal: 1000,
         auto_ad_rp: 1000,
         auto_ad: 20000,
-        robocallers: 10000
+        robocallers: 10000,
+        pop_pol: 500,
+        inv_pol: 1000,
+        coi_pol: 5000,
+        pop_pol_rp: 50,
+        inv_pol_rp: 200,
+        coi_pol_rp: 500,
+        after_pol: 1000,
+        while_pol: 1000,
+        after_pol_rp: 200,
+        while_pol_rp: 200
     },
     upgrades: {
         basic1: false,
@@ -74,7 +88,13 @@ var gstate = {
         comp_sys: false,
         bus_anal: false,
         auto_ad: false,
-        wh_op: false
+        wh_op: false,
+        imp_wh_op: false,
+        pop_pol: false,
+        inv_pol: false,
+        coi_pol: false,
+        after_pol: false,
+        while_pol: false
     },
     func: {
         res_finish: null
@@ -160,6 +180,19 @@ function init_upgrade_draw(state) {
         "Automated Advertisement [$" + state.prices.auto_ad + "]";
     document.getElementById("wh-op-text").innerHTML =
         "Warehouse Operations [$" + state.prices.wh_op + "]";
+    document.getElementById("imp-wh-op-text").innerHTML =
+        "Improved Warehouse Operations [$" + state.prices.imp_wh_op + "]";
+    document.getElementById("pop-pol-text").innerHTML =
+        "Storage Policy: Popularity [$" + state.prices.pop_pol + "]";
+    document.getElementById("inv-pol-text").innerHTML =
+        "Storage Policy: Maximum Inventory [$" + state.prices.inv_pol + "]";
+    document.getElementById("after-pol-text").innerHTML =
+        "Sorting Policy: sort-after-pick [$" + state.prices.after_pol + "]";
+    document.getElementById("while-pol-text").innerHTML =
+        "Sorting Policy: sort-while-pick [$" + state.prices.while_pol + "]";
+    document.getElementById("coi-pol-text").innerHTML =
+        document.getElementById("coi-pol-text").innerHTML =
+            "Storage Policy: Cube per Order Index [$" + state.prices.coi_pol + "]";
 }
 function draw(state) {
     draw_resource_bar(state);
@@ -268,6 +301,9 @@ function calculate_effeciency(state) {
         mw_ratio = 0.3;
     if (state.upgrades.auto1)
         static_bonus += 5;
+    if (state.res.slap_option >= 0) {
+        static_bonus += state.res.slap_option + 1;
+    }
     state.res.efficiency = (base_eff + static_bonus + (100 + bonuses) * mw_ratio) * 1.0 / 100;
 }
 function calculate_mark_eff(state) {
@@ -326,7 +362,7 @@ function calc_res_mod(state) {
 function calculate_research(state) {
     for (var i = 0; i < state.res.current_research.length; ++i) {
         var research = state.res.current_research[i];
-        research.rp += calc_res_mod(state);
+        research.rp += calc_res_mod(state) + 100;
         if (research.rp >= research.rp_goal) {
             research.finish(state);
             state.res.current_research.splice(i, 1);
@@ -369,6 +405,7 @@ function marketing_1() {
         gstate.res.money -= price;
         gstate.res.base_ord += gstate.other.marketing_bonus[lvl];
         gstate.res.base_rec += gstate.other.marketing_bonus[lvl];
+        document.getElementById("marketer-tab").style.display = "inline";
         if (gstate.upgrades.marketing >= gstate.prices.marketing.length)
             document.getElementById("marketing1").style.display = "none";
         draw_inc(gstate);
@@ -439,12 +476,93 @@ function op_res_buy() {
 function wh_op_finish(state) {
     state.upgrades.wh_op = true;
     document.getElementById("warehouse-op").style.display = "none";
+    document.getElementById("imp-warehouse-op").style.display = "inline";
+    document.getElementById("pop-pol").style.display = "inline";
     state_update(state);
 }
 function wh_op_res() {
     if (gstate.res.money >= gstate.prices.wh_op &&
         start_research(gstate, gstate.prices.wh_op_rp, null, wh_op_finish, "warehouse-op")) {
         gstate.res.money -= gstate.prices.wh_op;
+    }
+}
+function imp_wh_op_finish(state) {
+    state.upgrades.wh_op = true;
+    document.getElementById("imp-warehouse-op").style.display = "none";
+    document.getElementById("after-pol").style.display = "inline";
+    state_update(state);
+}
+function imp_wh_op_res() {
+    if (gstate.res.money >= gstate.prices.wh_op &&
+        start_research(gstate, gstate.prices.imp_wh_op_rp, null, imp_wh_op_finish, "imp-warehouse-op")) {
+        gstate.res.money -= gstate.prices.imp_wh_op;
+    }
+}
+function coi_pol_finish(state) {
+    state.upgrades.coi_pol = true;
+    document.getElementById("coi-pol").style.display = "none";
+    document.getElementById("coi-sel").style.display = "inline";
+    state_update(state);
+}
+function coi_pol_res() {
+    if (gstate.res.money >= gstate.prices.coi_pol &&
+        start_research(gstate, gstate.prices.coi_pol_rp, null, coi_pol_finish, "coi-pol")) {
+        gstate.res.money -= gstate.prices.coi_pol;
+    }
+}
+function inv_pol_finish(state) {
+    state.upgrades.inv_pol = true;
+    document.getElementById("inv-pol").style.display = "none";
+    document.getElementById("coi-pol").style.display = "inline";
+    document.getElementById("inv-sel").style.display = "inline";
+    state_update(state);
+}
+function inv_pol_res() {
+    if (gstate.res.money >= gstate.prices.inv_pol &&
+        start_research(gstate, gstate.prices.inv_pol_rp, null, inv_pol_finish, "inv-pol")) {
+        gstate.res.money -= gstate.prices.inv_pol;
+    }
+}
+function pop_pol_finish(state) {
+    state.upgrades.pop_pol = true;
+    document.getElementById("pop-pol").style.display = "none";
+    document.getElementById("stor-pol").style.display = "inline";
+    document.getElementById("inv-pol").style.display = "inline";
+    var e = document.getElementById("stor-pol-sel");
+    gstate.res.slap_option = e.selectedIndex;
+    state_update(state);
+}
+function pop_pol_res() {
+    if (gstate.res.money >= gstate.prices.pop_pol &&
+        start_research(gstate, gstate.prices.pop_pol_rp, null, pop_pol_finish, "pop-pol")) {
+        gstate.res.money -= gstate.prices.pop_pol;
+    }
+}
+function while_pol_finish(state) {
+    state.upgrades.while_pol = true;
+    document.getElementById("while-pol").style.display = "none";
+    document.getElementById("while-sel").style.display = "inline";
+    state_update(state);
+}
+function while_pol_res() {
+    if (gstate.res.money >= gstate.prices.while_pol &&
+        start_research(gstate, gstate.prices.while_pol_rp, null, while_pol_finish, "while-pol")) {
+        gstate.res.money -= gstate.prices.while_pol;
+    }
+}
+function after_pol_finish(state) {
+    state.upgrades.after_pol = true;
+    document.getElementById("after-pol").style.display = "none";
+    document.getElementById("sort-pol").style.display = "inline";
+    document.getElementById("while-pol").style.display = "inline";
+    var e = document.getElementById("sort-pol-sel");
+    gstate.res.sort_option = e.selectedIndex;
+    state_update(state);
+}
+function after_pol_res() {
+    if (gstate.res.money >= gstate.prices.after_pol &&
+        start_research(gstate, gstate.prices.after_pol_rp, null, after_pol_finish, "after-pol")) {
+        gstate.res.money -= gstate.prices.after_pol;
     }
 }
 function bus_anal_buy() {
@@ -550,4 +668,13 @@ function buy_worker_cap() {
         gstate.res.worker_max = Math.round(gstate.res.worker_max * 1.5);
         state_update(gstate);
     }
+}
+/* Decision functions */
+function stor_pol_sel_change() {
+    var e = document.getElementById("stor-pol-sel");
+    gstate.res.slap_option = e.selectedIndex;
+}
+function sort_pol_sel_change() {
+    var e = document.getElementById("sort-pol-sel");
+    gstate.res.sort_option = e.selectedIndex;
 }
