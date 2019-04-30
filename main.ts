@@ -145,7 +145,7 @@ let gstate = {
 		}
 	},
 	res: {
-		money: 100000000,
+		money: 0,
 		rp: 0,
 		rp_goal: 0,
 		unsk_w: 0,
@@ -186,8 +186,8 @@ let gstate = {
 		auto1: 500,
 		auto1_rp: 100,
 		belt: 5000,
-		worker_cap: 200,
-		storage_cap: 200,
+		worker_cap: 50,
+		storage_cap: 100,
 		wh_op: 500,
 		imp_wh_op: 50000,
 		wh_op_rp: 200,
@@ -204,10 +204,10 @@ let gstate = {
 		inv_pol: 1000,
 		coi_pol: 5000,
 		pop_pol_rp: 50,
-		inv_pol_rp: 200,
+		inv_pol_rp: 100,
 		coi_pol_rp: 500,
-		after_pol: 1000,
-		while_pol: 1000,
+		after_pol: 400,
+		while_pol: 500,
 		after_pol_rp: 200,
 		while_pol_rp: 200,
 		whms: 100000,
@@ -528,7 +528,7 @@ function calc_res_mod(state: GameState) {
 function calculate_research(state: GameState) {
 	for (let i = 0; i < state.res.current_research.length; ++i) {
 		let research = state.res.current_research[i];
-		research.rp += calc_res_mod(state);
+		research.rp += 2 * calc_res_mod(state);
 		if (research.rp >= research.rp_goal) {
 			research.finish(state);
 			state.res.current_research.splice(i,1);
@@ -880,7 +880,7 @@ function res_fire() {
 function buy_belt() {
 	if (gstate.res.money >= gstate.prices.belt) {
 		gstate.res.money -= gstate.prices.belt;
-		gstate.prices.belt = Math.round(gstate.prices.belt * 2);
+		gstate.prices.belt = Math.round(gstate.prices.belt * 1.2);
 		gstate.res.belt += 1;
 		state_update(gstate);
 	}
@@ -898,8 +898,8 @@ function buy_robocaller() {
 function buy_storage_cap() {
 	if (gstate.res.money >= gstate.prices.storage_cap) {
 		gstate.res.money -= gstate.prices.storage_cap;
-		gstate.prices.storage_cap = Math.round(gstate.prices.storage_cap * 1.5);
-		gstate.res.pack_max = Math.round(gstate.res.pack_max * 1.75);
+		gstate.prices.storage_cap = Math.round(gstate.prices.storage_cap * 1.1);
+		gstate.res.pack_max = gstate.res.pack_max + 10;
 		state_update(gstate);
 	}
 }
@@ -907,9 +907,9 @@ function buy_storage_cap() {
 function buy_worker_cap() {
 	if (gstate.res.money >= gstate.prices.worker_cap) {
 		gstate.res.money -= gstate.prices.worker_cap;
-		let m = 3.0;
+		let m = 1.1;
 		gstate.prices.worker_cap = Math.round(gstate.prices.worker_cap * m);
-		gstate.res.worker_max = Math.round(gstate.res.worker_max * 1.5);
+		gstate.res.worker_max = gstate.res.worker_max + 1;
 		state_update(gstate);
 	}
 }

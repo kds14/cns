@@ -3,7 +3,7 @@
 <head>
 <link rel="stylesheet" href="./styles.css">
 </head>
-<header><title>TITLE</title></header>
+<header><title>Warehouse Management Game</title></header>
 <body>
 <div class="grid">
 	<div id="resource-bar">
@@ -201,13 +201,13 @@
 	</div>
 	<div id="equip-area">
 		<div class="centered-text">Upgrades</div>
-		<div id="storage-cap">
-			<div id="storage-cap-text"></div>
-			<button class="cbtn" onclick="buy_storage_cap()">Upgrade</button>
-		</div>
-		<div id="worker-cap">
+		<div id="worker-cap" title="Increases worker capacity">
 			<div id="worker-cap-text"></div>
 			<button class="cbtn" onclick="buy_worker_cap()">Upgrade</button>
+		</div>
+		<div id="storage-cap" title="Increases storage capacity">
+			<div id="storage-cap-text"></div>
+			<button class="cbtn" onclick="buy_storage_cap()">Upgrade</button>
 		</div>
 		<div id="belt" style="display:none">
 			<div id="belt-text"></div>
@@ -220,5 +220,8 @@
 	</div>
 </div>
 </body>
+<footer>
+<a href="https://docs.google.com/presentation/d/1u7ih0FGItEROivHPuUr93lRTNBqrGEP3RqJopUildAE">Presentation</a>
+</footer>
 <script src="./main.js"></script>
 </html>

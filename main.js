@@ -15,13 +15,13 @@ var gstate = {
         }
     },
     res: {
-        money: 100000000,
+        money: 0,
         rp: 0,
         rp_goal: 0,
         unsk_w: 0,
         manag: 0,
         marketer: 0,
-        researcher: 50,
+        researcher: 0,
         labor: 1,
         efficiency: 10.0,
         pack_rec: 0,
@@ -56,8 +56,8 @@ var gstate = {
         auto1: 500,
         auto1_rp: 100,
         belt: 5000,
-        worker_cap: 200,
-        storage_cap: 200,
+        worker_cap: 50,
+        storage_cap: 100,
         wh_op: 500,
         imp_wh_op: 50000,
         wh_op_rp: 200,
@@ -693,17 +693,17 @@ function buy_robocaller() {
 function buy_storage_cap() {
     if (gstate.res.money >= gstate.prices.storage_cap) {
         gstate.res.money -= gstate.prices.storage_cap;
-        gstate.prices.storage_cap = Math.round(gstate.prices.storage_cap * 1.5);
-        gstate.res.pack_max = Math.round(gstate.res.pack_max * 1.75);
+        gstate.prices.storage_cap = Math.round(gstate.prices.storage_cap * 1.2);
+        gstate.res.pack_max = gstate.res.pack_max + 10;
         state_update(gstate);
     }
 }
 function buy_worker_cap() {
     if (gstate.res.money >= gstate.prices.worker_cap) {
         gstate.res.money -= gstate.prices.worker_cap;
-        var m = 3.0;
+        var m = 1.2;
         gstate.prices.worker_cap = Math.round(gstate.prices.worker_cap * m);
-        gstate.res.worker_max = Math.round(gstate.res.worker_max * 1.5);
+        gstate.res.worker_max = gstate.res.worker_max + 1;
         state_update(gstate);
     }
 }
