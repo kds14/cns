@@ -8,9 +8,9 @@
 <div class="grid">
 	<div id="resource-bar">
 		<div id="money-stat"></div>
-		<div id="worker-stat" title="Amount of labor from workers and machines"></div>
 		<div id="worker-eff" title="Effectiveness of storing and shipping packages"></div>
 		<div id="marketing"></div>
+		<div id="worker-stat style="display:none" title="Amount of labor from workers and machines"></div>
 		<div></div>
 		<div></div>
 		<div id="pack-rec" title="Packages waiting to be stored"></div>
@@ -26,16 +26,16 @@
 		<div style="display:none" id="stor-pol">
 			Storage Policy
 			<select id="stor-pol-sel" class="cbtn" onchange="stor_pol_sel_change()">
-			  <option value="pop">Popularity</option>
-			  <option id="inv-sel" style="display:none" value="inv">Maximum Inventory</option>
-			  <option id="coi-sel" style="display:none" value="coi">Cube per Order Index</option>
+			  <option value="pop" title="Store the most popular items in the most desirable locations">Popularity</option>
+			  <option id="inv-sel" style="display:none" value="inv" title="Store items with highest maximum inventory in the most desirable locations">Maximum Inventory</option>
+			  <option id="coi-sel" style="display:none" value="coi" title="Store items based on maximum inventory and popularity">Cube per Order Index</option>
 			</select>
 		</div>
 	<div style="display:none" id="sort-pol">
 				Sorting Policy
 				<select id="sort-pol-sel" class="cbtn" onchange="sort_pol_sel_change()">
-				  <option value="after">sort-after-pick</option>
-				  <option id="while-sel" style="display:none" value="while">sort-while-pick</option>
+				  <option value="after" title="Sort items after picking">sort-after-pick</option>
+				  <option id="while-sel" style="display:none" value="while" title="Sort items while picking">sort-while-pick</option>
 				</select>
 			</div>
 		</div>
@@ -173,6 +173,20 @@
 		<div id="computer-systems" style="display:none" title="Unlocks new computer system research">
 			<div id="comp-sys-text"></div>
 			<button class="cbtn" onclick="comp_sys_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
+		<div id="surv" style="display:none" title="Unlocks worker surveillance">
+			<div id="surv-text"></div>
+			<button class="cbtn" onclick="surv_res()">Research</button>
+		<div class="current-res" style="display:none">
+		<div class="res-prog"><div class="res-bar"></div> </div>
+		</div>
+		</div>
+		<div id="whms" style="display:none" title="Unlocks warehouse management systems">
+			<div id="whms-text"></div>
+			<button class="cbtn" onclick="whms_res()">Research</button>
 		<div class="current-res" style="display:none">
 		<div class="res-prog"><div class="res-bar"></div> </div>
 		</div>

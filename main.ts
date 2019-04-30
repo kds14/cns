@@ -50,6 +50,8 @@ interface Prices {
 	storage_cap: number;
 	comp_sys_rp: number;
 	comp_sys: number;
+	surv: number,
+	surv_rp: number,
 	bus_anal: number;
 	auto_ad: number;
 	auto_ad_rp: number;
@@ -68,6 +70,8 @@ interface Prices {
 	while_pol: number,
 	after_pol_rp: number,
 	while_pol_rp: number,
+	whms: number,
+	whms_rp: number,
 }
 
 interface Timer {
@@ -89,6 +93,7 @@ interface Upgrades {
 	wh_op: Boolean,
 	imp_wh_op: Boolean,
 	comp_sys: Boolean,
+	surv: Boolean,
 	bus_anal: Boolean,
 	auto_ad: Boolean,
 	pop_pol: Boolean,
@@ -96,6 +101,7 @@ interface Upgrades {
 	coi_pol: Boolean,
 	after_pol: Boolean,
 	while_pol: Boolean,
+	whms: Boolean,
 }
 
 interface Research {
@@ -139,7 +145,7 @@ let gstate = {
 		}
 	},
 	res: {
-		money: 100000,
+		money: 100000000,
 		rp: 0,
 		rp_goal: 0,
 		unsk_w: 0,
@@ -157,7 +163,7 @@ let gstate = {
 		base_rec: 10,
 		mark_eff: 0,
 		base_ord: 1,
-		base_sell: 10,
+		base_sell: 5,
 		eff_bonus: 0,
 		base_mark_eff: 10,
 		worker_max: 10,
@@ -188,6 +194,8 @@ let gstate = {
 		imp_wh_op_rp: 1000,
 		comp_sys_rp: 500,
 		comp_sys: 10000,
+		surv: 150000,
+		surv_rp: 5000,
 		bus_anal: 1000,
 		auto_ad_rp: 1000,
 		auto_ad: 20000,
@@ -202,6 +210,8 @@ let gstate = {
 		while_pol: 1000,
 		after_pol_rp: 200,
 		while_pol_rp: 200,
+		whms: 100000,
+		whms_rp: 1000,
 	},
 	upgrades: {
 		basic1: false,
@@ -219,12 +229,14 @@ let gstate = {
 		coi_pol: false,
 		after_pol: false,
 		while_pol: false,
+		whms: false,
+		surv: false,
 	},
 	func: {
 	res_finish: null,
 	},
 	other: {
-	marketing_bonus: [1,1,2,10,10,20,100]
+	marketing_bonus: [1,2,5,10,20,50,100]
    },
 }
 
@@ -236,19 +248,19 @@ update(gstate);
 function draw_resource_bar(state: GameState) {
 	let money_rate = "";
 	if (state.upgrades.bus_anal)
-		money_rate = " ($" + (state.stats.money_avg).toFixed(2) + "/fr)";
+		money_rate = " ($" + (state.stats.money_avg).toFixed(2) + "/s)";
 	document.getElementById("money-stat").innerHTML =
 		"Money: $" + Math.floor(state.res.money) + money_rate;
-	document.getElementById("worker-stat").innerHTML =
-		"Labor: " + state.res.labor;
+	/*document.getElementById("worker-stat").innerHTML =
+		"Labor: " + state.res.labor;*/
 	document.getElementById("worker-eff").innerHTML =
 		"Efficiency: " + (state.res.efficiency * 100).toFixed(2) + "%";
 	document.getElementById("orders-stat").innerHTML =
-		"Pending Orders: " + Math.floor(state.res.orders);
+		"Pending Orders: " + Math.floor(state.res.orders) + " / " + Math.floor(state.res.pack_max);
 	document.getElementById("pack-rec").innerHTML =
-		"Received Packages: " + Math.floor(state.res.pack_rec);
+		"Received Packages: " + Math.floor(state.res.pack_rec) + " / " + Math.floor(state.res.pack_max);
 	document.getElementById("pack-stored").innerHTML =
-		"Stored Packages: " + Math.floor(state.res.pack_stored);
+		"Stored Packages: " + Math.floor(state.res.pack_stored) + " / " + Math.floor(state.res.pack_max);
 	document.getElementById("pack-shipped").innerHTML =
 		"Shipped Packages: " + Math.floor(state.res.pack_shipped_full);
 	if (state.upgrades.marketing > 0) {
@@ -273,8 +285,9 @@ function draw_resource_bar(state: GameState) {
 }
 
 function draw_worker_area(state: GameState) {
+	let unsk_name = "Unskilled Workers ";
 	document.getElementById("unskilled-text").innerHTML =
-		"Unskilled Workers: " + state.res.unsk_w;
+		unsk_name + state.res.unsk_w;
 	document.getElementById("manager-text").innerHTML =
 		"Managers: " + state.res.manag;
 	if (state.upgrades.marketing > 0) {
@@ -304,6 +317,10 @@ function init_upgrade_draw(state: GameState) {
 		"Automation Research I [$" + state.prices.auto1 + "]";
 	document.getElementById("comp-sys-text").innerHTML =
 		"Computer Systems Research [$" + state.prices.comp_sys + "]";
+	document.getElementById("surv-text").innerHTML =
+		"Worker Surveillance [$" + state.prices.surv + "]";
+	document.getElementById("whms-text").innerHTML =
+		"Warehouse Management Systems [$" + state.prices.whms + "]";
 	document.getElementById("bus-anal-text").innerHTML =
 		"Business Analytics [$" + state.prices.bus_anal + "]";
 	document.getElementById("auto-ad-text").innerHTML =
@@ -387,13 +404,13 @@ function handle_packages(state: GameState) {
 }
 
 function receive_packages(state: GameState) {
-	const amnt = state.res.base_rec * 1.0 * state.res.mark_eff + state.res.base_rec + state.res.base_rec * Math.random() / 2.0;
+	const amnt = state.res.base_rec * 1.0 * state.res.mark_eff + state.res.base_rec + state.res.base_rec * Math.random() / 2.0 + state.res.pack_max / 100.0;
 	const diff = add_package(state, amnt);
 	state.res.pack_rec += diff;
 }
 
 function store_packages(state: GameState) {
-	const eff = state.res.labor * state.res.efficiency * 1.0 * (1 + 1.25 * state.res.belt);
+	const eff = state.res.labor * state.res.efficiency * 1.0;
 	if (eff < state.res.pack_rec) {
 		state.res.pack_rec -= eff;
 		state.res.pack_stored += eff;
@@ -401,12 +418,14 @@ function store_packages(state: GameState) {
 		state.res.pack_stored += state.res.pack_rec;
 		state.res.pack_rec = 0;
 	}
+	if (state.res.pack_stored > state.res.pack_max)
+		state.res.pack_stored = state.res.pack_max;
 }
 
 function ship_packages(state: GameState) {
 	if (state.res.pack_stored < 1)
 		return;
-	let eff = state.res.labor * 0.25 * (1 + state.res.belt) * state.res.efficiency;
+	let eff = state.res.labor * 0.25 * state.res.efficiency;
 	const min = Math.min(state.res.orders, state.res.pack_stored)
 		if (eff > min)
 			eff = min;
@@ -434,13 +453,13 @@ function calculate_orders(state: GameState) {
 function calculate_effeciency(state: GameState): void {
 	const base_eff = 10;
 	let bonuses = state.res.eff_bonus;
-	let static_bonus = 0.5 * state.res.belt;
+	let static_bonus = 10.0 * state.res.belt;
 	let mw_ratio = state.res.manag / state.res.unsk_w;
 	if (isNaN(mw_ratio) || !isFinite(mw_ratio)) {
 		mw_ratio = 0;
 	}
-	if (mw_ratio > 0.3)
-		mw_ratio = 0.3;
+	if (mw_ratio > 0.2)
+		mw_ratio = 0.2;
 	if (state.upgrades.auto1)
 		static_bonus += 5;
 	if(state.res.slap_option >= 0) {
@@ -473,13 +492,11 @@ function buy_worker(state: GameState): Boolean {
 }
 
 function add_package(state: GameState, add: number): number {
-	const p = state.res.pack_rec + state.res.pack_stored + add;
+	const p = state.res.pack_rec + add;
 	let diff = state.res.pack_max - p + 1;
 	let res = add;
 	if (diff < 0)
-		res += diff;
-	if (res < 0)
-		res = 0;
+		res = state.res.pack_max - state.res.pack_rec;
 	return res;
 }
 
@@ -511,7 +528,7 @@ function calc_res_mod(state: GameState) {
 function calculate_research(state: GameState) {
 	for (let i = 0; i < state.res.current_research.length; ++i) {
 		let research = state.res.current_research[i];
-		research.rp += calc_res_mod(state) + 100;
+		research.rp += calc_res_mod(state);
 		if (research.rp >= research.rp_goal) {
 			research.finish(state);
 			state.res.current_research.splice(i,1);
@@ -598,6 +615,7 @@ function automation1_res() {
 function comp_sys_res_finish(state: GameState) {
 	state.upgrades.comp_sys = true;
 	document.getElementById("auto-ad").style.display = "inline";
+	document.getElementById("whms").style.display = "inline";
 	document.getElementById("computer-systems").style.display = "none";
 	state_update(state);
 }
@@ -607,6 +625,37 @@ function comp_sys_res() {
 			start_research(gstate, gstate.prices.comp_sys_rp, "Computer Systems", comp_sys_res_finish, "computer-systems")
 	   ) {
 		gstate.res.money -= gstate.prices.comp_sys;
+	}
+}
+
+function surv_res_finish(state: GameState) {
+	state.upgrades.surv = true;
+	document.getElementById("surv").style.display = "none";
+	state.res.eff_bonus += 5;
+	state_update(state);
+}
+
+function surv_res() {
+	if (gstate.res.money >= gstate.prices.surv &&
+			start_research(gstate, gstate.prices.surv_rp, "Worker Surveillance", surv_res_finish, "surv")
+	   ) {
+		gstate.res.money -= gstate.prices.surv;
+	}
+}
+
+function whms_res_finish(state: GameState) {
+	state.upgrades.whms = true;
+	document.getElementById("whms").style.display = "none";
+	document.getElementById("surv").style.display = "inline";
+	state.res.eff_bonus += 5;
+	state_update(state);
+}
+
+function whms_res() {
+	if (gstate.res.money >= gstate.prices.whms &&
+			start_research(gstate, gstate.prices.whms_rp, "Warehouse Management Systems", whms_res_finish, "whms")
+	   ) {
+		gstate.res.money -= gstate.prices.whms;
 	}
 }
 
@@ -659,7 +708,7 @@ function imp_wh_op_finish(state: GameState) {
 }
 
 function imp_wh_op_res() {
-	if (gstate.res.money >= gstate.prices.wh_op &&
+	if (gstate.res.money >= gstate.prices.imp_wh_op &&
 			start_research(gstate, gstate.prices.imp_wh_op_rp, null, imp_wh_op_finish, "imp-warehouse-op")) {
 		gstate.res.money -= gstate.prices.imp_wh_op;
 	}
@@ -759,6 +808,7 @@ function sci_manag_buy() {
 		gstate.upgrades.sci_manag = true;
 		gstate.res.eff_bonus += 10;
 		gstate.res.marketer_base_bonus += 5;
+		gstate.res.money -= gstate.prices.sci_manag;
 		state_update(gstate);
 	}
 }
@@ -839,7 +889,7 @@ function buy_belt() {
 function buy_robocaller() {
 	if (gstate.res.money >= gstate.prices.robocallers) {
 		gstate.res.money -= gstate.prices.robocallers;
-		gstate.prices.belt = Math.round(gstate.prices.robocallers * 3);
+		gstate.prices.robocallers = Math.round(gstate.prices.robocallers * 3);
 		gstate.res.robocallers += 1;
 		state_update(gstate);
 	}
@@ -857,7 +907,7 @@ function buy_storage_cap() {
 function buy_worker_cap() {
 	if (gstate.res.money >= gstate.prices.worker_cap) {
 		gstate.res.money -= gstate.prices.worker_cap;
-		let m = gstate.res.worker_max > 10 ? 3.0 : 2.0;
+		let m = 3.0;
 		gstate.prices.worker_cap = Math.round(gstate.prices.worker_cap * m);
 		gstate.res.worker_max = Math.round(gstate.res.worker_max * 1.5);
 		state_update(gstate);
